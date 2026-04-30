@@ -268,7 +268,11 @@ body {
 .detail-name { font-family: 'Fredoka One', cursive; font-size: 1.15rem; flex: 1; }
 .del-btn { background: rgba(255,61,107,0.15); border: none; color: var(--accent); width: 38px; height: 38px; border-radius: 11px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .share-btn { background: rgba(0,201,167,0.15); border: none; color: var(--teal); width: 38px; height: 38px; border-radius: 11px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.detail-img { width: 100%; max-height: 130px; object-fit: cover; background: #080815; border-radius: 0 0 16px 16px; }
+.detail-img { width: 100%; max-height: 130px; object-fit: cover; background: #080815; border-radius: 0 0 16px 16px; cursor: zoom-in; }
+.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; align-items: center; justify-content: center; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 12px; }
+.lightbox-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-weight: 900; }
 .detail-img-ph { width: 100%; height: 90px; background: #080815; display: flex; align-items: center; justify-content: center; font-size: 3rem; border-radius: 0 0 16px 16px; }
 .detail-body { padding: 16px; }
 .detail-price { font-family: 'Fredoka One', cursive; font-size: 2.2rem; color: var(--gold); }
@@ -533,6 +537,12 @@ body {
 </div>
 
 </div><!-- app-screen -->
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
 
 <!-- DETALLE -->
 <div class="detail-overlay" id="detail-overlay">
@@ -993,7 +1003,7 @@ window.openDetail = (id) => {
   document.getElementById('d-price').textContent = t.compra ? '$'+Number(t.compra).toLocaleString()+' USD' : 'Sin costo';
   document.getElementById('d-brand').textContent = [t.marca,t.anio,t.origen,`👤 ${t.userName||''}`].filter(Boolean).join(' · ');
   document.getElementById('d-img').innerHTML = t.fotoUrl
-    ? `<img src="${t.fotoUrl}" class="detail-img">`
+    ? `<img src="${t.fotoUrl}" class="detail-img" onclick="openLightbox('${t.fotoUrl}')">`
     : `<div class="detail-img-ph">🤖</div>`;
   const chips = [];
   if (t.estado) chips.push(`<span class="chip ac">${t.estado}</span>`);
@@ -1058,6 +1068,15 @@ window.showTab = (tab) => {
   const tabMap = {coleccion:0,top10:1,estadisticas:2,historial:3,agregar:4};
   const tabEls = document.querySelectorAll('.tab');
   if (tabMap[tab] !== undefined) tabEls[tabMap[tab]]?.classList.add('active');
+};
+
+// ─── LIGHTBOX ─────────────────────────────────────────────────────────
+window.openLightbox = (url) => {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
+};
+window.closeLightbox = () => {
+  document.getElementById('lightbox').classList.remove('open');
 };
 
 // ─── TOAST ────────────────────────────────────────────────────────────
