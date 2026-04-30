@@ -365,10 +365,10 @@ body {
 
 <!-- COLECCIÓN -->
 <div class="view active" id="view-coleccion">
-  <div class="search-row">
-    <input class="search-input" id="search" placeholder="🔍 Buscar juguete, marca..." oninput="renderGrid()">
+  <div class="search-row" style="position:relative">
+    <input class="search-input" id="search" placeholder="🔍 Buscar juguete, marca o categoría..." oninput="onSearchInput()" onfocus="showCatDropdown()" autocomplete="off" style="flex:1">
+    <div id="cat-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:2px solid var(--accent);border-radius:12px;z-index:200;max-height:220px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4)"></div>
   </div>
-  <div id="cat-filters" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 8px 0;scrollbar-width:none;-ms-overflow-style:none;"></div>
   <div class="toys-grid" id="toys-grid"></div>
   <div class="empty" id="empty-state" style="display:none">
     <div class="emoji">🤖</div>
@@ -494,12 +494,13 @@ body {
       </div>
       <div class="form-group">
         <label>🗂️ Categoría</label>
-        <select id="f-cat">
+        <select id="f-cat" onchange="onCatChange()">
           <option value="">Tipo...</option>
           <option>🤖 Robot</option><option>🐒 Animal</option>
           <option>🎪 Payaso</option><option>🚗 Vehículo</option>
           <option>👧 Muñeca</option><option>🎷 Músico</option><option>Otro</option>
         </select>
+        <input type="text" id="f-cat-nueva" placeholder="✏️ Escribe la nueva categoría..." style="display:none;margin-top:6px;width:100%;padding:10px 12px;background:var(--card2);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:0.9rem">
       </div>
     </div>
     <div class="form-group">
@@ -650,21 +651,61 @@ function updateHeader() {
 
 // ─── FILTROS CATEGORÍA ────────────────────────────────────────────────
 let activeCat = '';
-window.setCatFilter = (cat) => {
-  activeCat = activeCat === cat ? '' : cat;
-  renderCatFilters();
+
+window.onCatChange = () => {
+  const val = document.getElementById('f-cat').value;
+  const input = document.getElementById('f-cat-nueva');
+  input.style.display = val === 'Otro' ? 'block' : 'none';
+  if (val === 'Otro') input.focus();
+};
+
+window.getCats = () => [...new Set(toys.map(t=>t.cat).filter(Boolean))].sort();
+
+window.showCatDropdown = () => {
+  const dd = document.getElementById('cat-dropdown');
+  const cats = getCats();
+  if (!cats.length) return;
+  dd.style.display = 'block';
+  renderCatDropdown('');
+  document.addEventListener('click', hideCatDropdown);
+};
+
+window.hideCatDropdown = (e) => {
+  if (!e.target.closest('#cat-dropdown') && e.target.id !== 'search') {
+    document.getElementById('cat-dropdown').style.display = 'none';
+    document.removeEventListener('click', hideCatDropdown);
+  }
+};
+
+window.renderCatDropdown = (q) => {
+  const dd = document.getElementById('cat-dropdown');
+  const cats = getCats().filter(c => !q || c.toLowerCase().includes(q));
+  const all = [{ label: '🔍 Todas las categorías', val: '' }, ...cats.map(c => ({ label: c, val: c }))];
+  dd.innerHTML = all.map(c => `
+    <div onclick="selectCatFilter('${c.val}')" style="padding:10px 14px;cursor:pointer;font-size:0.85rem;font-weight:700;border-bottom:1px solid var(--border);color:${activeCat===c.val?'var(--accent)':'var(--text)'};background:${activeCat===c.val?'rgba(255,61,107,0.1)':'transparent'}" 
+    onmouseover="this.style.background='rgba(255,61,107,0.08)'" onmouseout="this.style.background='${activeCat===c.val?'rgba(255,61,107,0.1)':'transparent'}'">
+      ${c.label}${activeCat===c.val?' ✓':''}
+    </div>`).join('');
+};
+
+window.selectCatFilter = (cat) => {
+  activeCat = cat;
+  document.getElementById('cat-dropdown').style.display = 'none';
+  document.getElementById('search').value = '';
   renderGrid();
 };
-window.renderCatFilters = () => {
-  const cats = [...new Set(toys.map(t=>t.cat).filter(Boolean))].sort();
-  const el = document.getElementById('cat-filters');
-  if (!el) return;
-  el.innerHTML = ['Todos',...cats].map(c => {
-    const isAll = c==='Todos';
-    const active = isAll ? !activeCat : activeCat===c;
-    return `<button onclick="setCatFilter('${isAll?'':c}')" style="flex-shrink:0;padding:5px 12px;border-radius:20px;border:2px solid ${active?'var(--accent)':'var(--border)'};background:${active?'var(--accent)':'var(--card)'};color:${active?'white':'var(--text)'};font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">${c}</button>`;
-  }).join('');
+
+window.onSearchInput = () => {
+  const q = document.getElementById('search').value.toLowerCase();
+  if (q) {
+    activeCat = '';
+    const dd = document.getElementById('cat-dropdown');
+    dd.style.display = 'none';
+  }
+  renderGrid();
 };
+
+window.renderCatFilters = () => {};
 
 // ─── RENDER GRID ──────────────────────────────────────────────────────
 window.renderGrid = () => {
@@ -921,7 +962,9 @@ window.saveToy = async () => {
       origen: document.getElementById('f-origen').value,
       estado: document.getElementById('f-estado').value,
       caja: document.getElementById('f-caja').value,
-      cat: document.getElementById('f-cat').value,
+      cat: document.getElementById('f-cat').value === 'Otro' 
+        ? document.getElementById('f-cat-nueva').value.trim() || 'Otro'
+        : document.getElementById('f-cat').value,
       notas: document.getElementById('f-notas').value.trim(),
       fotoUrl,
       userId: currentUser.uid,
@@ -953,6 +996,8 @@ window.clearForm = () => {
   resetPhoto();
   document.getElementById('ai-result').classList.remove('show');
   editingId = null;
+  document.getElementById('f-cat-nueva').style.display = 'none';
+  document.getElementById('f-cat-nueva').value = '';
   document.getElementById('section-title-agregar').textContent = '✨ Agregar juguete';
   document.getElementById('save-btn').textContent = '✅ Guardar en la nube';
 };
