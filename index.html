@@ -667,12 +667,13 @@ window.showCatDropdown = () => {
   if (!cats.length) return;
   dd.style.display = 'block';
   renderCatDropdown('');
-  document.addEventListener('click', hideCatDropdown);
+  setTimeout(() => document.addEventListener('click', hideCatDropdown), 100);
 };
 
 window.hideCatDropdown = (e) => {
   if (!e.target.closest('#cat-dropdown') && e.target.id !== 'search') {
-    document.getElementById('cat-dropdown').style.display = 'none';
+    const dd = document.getElementById('cat-dropdown');
+    if (dd) dd.style.display = 'none';
     document.removeEventListener('click', hideCatDropdown);
   }
 };
