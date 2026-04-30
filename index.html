@@ -644,6 +644,7 @@ function startListening() {
   unsubscribe = onSnapshot(q, snapshot => {
     toys = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     renderGrid();
+    renderCatFilters();
     renderTop10();
     renderStats();
     renderHistorial();
@@ -1096,4 +1097,4 @@ window.showToast = (msg, isError=false) => {
 
 </script>
 </body>
- </html>
+</html>
