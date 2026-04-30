@@ -126,7 +126,7 @@ body {
 .search-input:focus { outline: none; border-color: var(--accent); }
 
 /* GRID */
-.toys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.toys-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .toy-card {
   background: var(--card); border-radius: 16px; overflow: hidden;
   border: 2px solid var(--border); cursor: pointer; transition: all 0.2s;
@@ -140,9 +140,9 @@ body {
   font-size: 2.5rem; overflow: hidden;
 }
 .toy-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
-.toy-info { padding: 9px; }
-.toy-name { font-weight: 800; font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.toy-brand { font-size: 0.7rem; color: var(--teal); font-weight: 700; margin-top: 1px; }
+.toy-info { padding: 6px; }
+.toy-name { font-weight: 800; font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toy-brand { font-size: 0.62rem; color: var(--teal); font-weight: 700; margin-top: 1px; }
 .toy-price { font-family: 'Fredoka One', cursive; font-size: 1rem; color: var(--gold); margin-top: 3px; }
 .toy-user { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
 
@@ -368,6 +368,7 @@ body {
   <div class="search-row">
     <input class="search-input" id="search" placeholder="🔍 Buscar juguete, marca..." oninput="renderGrid()">
   </div>
+  <div id="cat-filters" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 8px 0;scrollbar-width:none;-ms-overflow-style:none;"></div>
   <div class="toys-grid" id="toys-grid"></div>
   <div class="empty" id="empty-state" style="display:none">
     <div class="emoji">🤖</div>
@@ -647,10 +648,29 @@ function updateHeader() {
   document.getElementById('h-usd').textContent = '$'+usd.toLocaleString();
 }
 
+// ─── FILTROS CATEGORÍA ────────────────────────────────────────────────
+let activeCat = '';
+window.setCatFilter = (cat) => {
+  activeCat = activeCat === cat ? '' : cat;
+  renderCatFilters();
+  renderGrid();
+};
+window.renderCatFilters = () => {
+  const cats = [...new Set(toys.map(t=>t.cat).filter(Boolean))].sort();
+  const el = document.getElementById('cat-filters');
+  if (!el) return;
+  el.innerHTML = ['Todos',...cats].map(c => {
+    const isAll = c==='Todos';
+    const active = isAll ? !activeCat : activeCat===c;
+    return `<button onclick="setCatFilter('${isAll?'':c}')" style="flex-shrink:0;padding:5px 12px;border-radius:20px;border:2px solid ${active?'var(--accent)':'var(--border)'};background:${active?'var(--accent)':'var(--card)'};color:${active?'white':'var(--text)'};font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">${c}</button>`;
+  }).join('');
+};
+
 // ─── RENDER GRID ──────────────────────────────────────────────────────
 window.renderGrid = () => {
   const q = (document.getElementById('search').value||'').toLowerCase();
-  const list = q ? toys.filter(t => (t.nombre+t.marca+t.origen+t.cat||'').toLowerCase().includes(q)) : toys;
+  let list = q ? toys.filter(t => (t.nombre+t.marca+t.origen+t.cat||'').toLowerCase().includes(q)) : toys;
+  if (activeCat) list = list.filter(t => t.cat === activeCat);
   const grid = document.getElementById('toys-grid');
   const empty = document.getElementById('empty-state');
   const loading = document.getElementById('loading-state');
