@@ -126,7 +126,7 @@ body {
 .search-input:focus { outline: none; border-color: var(--accent); }
 
 /* GRID */
-.toys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.toys-grid { display: flex; flex-direction: column; }
 .toy-card {
   background: var(--card); border-radius: 16px; overflow: hidden;
   border: 2px solid var(--border); cursor: pointer; transition: all 0.2s;
@@ -140,9 +140,9 @@ body {
   font-size: 2.5rem; overflow: hidden;
 }
 .toy-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
-.toy-info { padding: 9px; }
-.toy-name { font-weight: 800; font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.toy-brand { font-size: 0.7rem; color: var(--teal); font-weight: 700; margin-top: 1px; }
+.toy-info { padding: 6px; }
+.toy-name { font-weight: 800; font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toy-brand { font-size: 0.62rem; color: var(--teal); font-weight: 700; margin-top: 1px; }
 .toy-price { font-family: 'Fredoka One', cursive; font-size: 1rem; color: var(--gold); margin-top: 3px; }
 .toy-user { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
 
@@ -268,8 +268,8 @@ body {
 .detail-name { font-family: 'Fredoka One', cursive; font-size: 1.15rem; flex: 1; }
 .del-btn { background: rgba(255,61,107,0.15); border: none; color: var(--accent); width: 38px; height: 38px; border-radius: 11px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .share-btn { background: rgba(0,201,167,0.15); border: none; color: var(--teal); width: 38px; height: 38px; border-radius: 11px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.detail-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #080815; }
-.detail-img-ph { width: 100%; aspect-ratio: 4/3; background: #080815; display: flex; align-items: center; justify-content: center; font-size: 7rem; }
+.detail-img { width: 100%; max-height: 130px; object-fit: cover; background: #080815; border-radius: 0 0 16px 16px; }
+.detail-img-ph { width: 100%; height: 90px; background: #080815; display: flex; align-items: center; justify-content: center; font-size: 3rem; border-radius: 0 0 16px 16px; }
 .detail-body { padding: 16px; }
 .detail-price { font-family: 'Fredoka One', cursive; font-size: 2.2rem; color: var(--gold); }
 .detail-brand-line { font-size: 0.88rem; color: var(--muted); margin-bottom: 14px; }
@@ -365,8 +365,9 @@ body {
 
 <!-- COLECCIÓN -->
 <div class="view active" id="view-coleccion">
-  <div class="search-row">
-    <input class="search-input" id="search" placeholder="🔍 Buscar juguete, marca..." oninput="renderGrid()">
+  <div class="search-row" style="position:relative">
+    <input class="search-input" id="search" placeholder="🔍 Buscar juguete, marca o categoría..." oninput="onSearchInput()" onfocus="showCatDropdown()" autocomplete="off" style="flex:1">
+    <div id="cat-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:2px solid var(--accent);border-radius:12px;z-index:200;max-height:220px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4)"></div>
   </div>
   <div class="toys-grid" id="toys-grid"></div>
   <div class="empty" id="empty-state" style="display:none">
@@ -493,12 +494,13 @@ body {
       </div>
       <div class="form-group">
         <label>🗂️ Categoría</label>
-        <select id="f-cat">
+        <select id="f-cat" onchange="onCatChange()">
           <option value="">Tipo...</option>
           <option>🤖 Robot</option><option>🐒 Animal</option>
           <option>🎪 Payaso</option><option>🚗 Vehículo</option>
           <option>👧 Muñeca</option><option>🎷 Músico</option><option>Otro</option>
         </select>
+        <input type="text" id="f-cat-nueva" placeholder="✏️ Escribe la nueva categoría..." style="display:none;margin-top:6px;width:100%;padding:10px 12px;background:var(--card2);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:0.9rem;position:relative;z-index:10;pointer-events:all;-webkit-user-select:text;user-select:text">
       </div>
     </div>
     <div class="form-group">
@@ -647,26 +649,84 @@ function updateHeader() {
   document.getElementById('h-usd').textContent = '$'+usd.toLocaleString();
 }
 
+// ─── FILTROS CATEGORÍA ────────────────────────────────────────────────
+let activeCat = '';
+
+window.onCatChange = () => {
+  const val = document.getElementById('f-cat').value;
+  const input = document.getElementById('f-cat-nueva');
+  input.style.display = val === 'Otro' ? 'block' : 'none';
+  if (val === 'Otro') input.focus();
+};
+
+window.getCats = () => [...new Set(toys.map(t=>t.cat).filter(Boolean))].sort();
+
+window.showCatDropdown = () => {
+  const dd = document.getElementById('cat-dropdown');
+  const cats = getCats();
+  if (!cats.length) return;
+  dd.style.display = 'block';
+  renderCatDropdown('');
+  document.addEventListener('click', hideCatDropdown);
+};
+
+window.hideCatDropdown = (e) => {
+  if (!e.target.closest('#cat-dropdown') && e.target.id !== 'search') {
+    document.getElementById('cat-dropdown').style.display = 'none';
+    document.removeEventListener('click', hideCatDropdown);
+  }
+};
+
+window.renderCatDropdown = (q) => {
+  const dd = document.getElementById('cat-dropdown');
+  const cats = getCats().filter(c => !q || c.toLowerCase().includes(q));
+  const all = [{ label: '🔍 Todas las categorías', val: '' }, ...cats.map(c => ({ label: c, val: c }))];
+  dd.innerHTML = all.map(c => `
+    <div onclick="selectCatFilter('${c.val}')" style="padding:10px 14px;cursor:pointer;font-size:0.85rem;font-weight:700;border-bottom:1px solid var(--border);color:${activeCat===c.val?'var(--accent)':'var(--text)'};background:${activeCat===c.val?'rgba(255,61,107,0.1)':'transparent'}" 
+    onmouseover="this.style.background='rgba(255,61,107,0.08)'" onmouseout="this.style.background='${activeCat===c.val?'rgba(255,61,107,0.1)':'transparent'}'">
+      ${c.label}${activeCat===c.val?' ✓':''}
+    </div>`).join('');
+};
+
+window.selectCatFilter = (cat) => {
+  activeCat = cat;
+  document.getElementById('cat-dropdown').style.display = 'none';
+  document.getElementById('search').value = '';
+  renderGrid();
+};
+
+window.onSearchInput = () => {
+  const q = document.getElementById('search').value.toLowerCase();
+  if (q) {
+    activeCat = '';
+    const dd = document.getElementById('cat-dropdown');
+    dd.style.display = 'none';
+  }
+  renderGrid();
+};
+
+window.renderCatFilters = () => {};
+
 // ─── RENDER GRID ──────────────────────────────────────────────────────
 window.renderGrid = () => {
   const q = (document.getElementById('search').value||'').toLowerCase();
-  const list = q ? toys.filter(t => (t.nombre+t.marca+t.origen+t.cat||'').toLowerCase().includes(q)) : toys;
+  let list = q ? toys.filter(t => (t.nombre+t.marca+t.origen+t.cat||'').toLowerCase().includes(q)) : toys;
+  if (activeCat) list = list.filter(t => t.cat === activeCat);
   const grid = document.getElementById('toys-grid');
   const empty = document.getElementById('empty-state');
   const loading = document.getElementById('loading-state');
   loading.style.display = 'none';
   empty.style.display = list.length ? 'none' : 'block';
   grid.innerHTML = list.map(t => `
-    <div class="toy-card" onclick="openDetail('${t.id}')">
-      <div class="toy-img-wrap">
-        ${t.fotoUrl ? `<img src="${t.fotoUrl}" loading="lazy">` : '🤖'}
+    <div class="hist-item" onclick="openDetail('${t.id}')">
+      <div class="hist-img">${t.fotoUrl ? `<img src="${t.fotoUrl}" loading="lazy">` : '🤖'}</div>
+      <div class="hist-info">
+        <div class="hist-name">${t.nombre}</div>
+        <div class="hist-brand">${t.marca||'Sin marca'}${t.anio?' · '+t.anio:''}</div>
+        ${t.cat?`<div class="hist-date">📦 ${t.cat}</div>`:''}
+        <div class="hist-user">👤 ${t.userName||'Usuario'}</div>
       </div>
-      <div class="toy-info">
-        <div class="toy-name">${t.nombre}</div>
-        <div class="toy-brand">${t.marca||'Sin marca'}</div>
-        <div class="toy-price">${t.compra ? '$'+Number(t.compra).toLocaleString() : '—'}</div>
-        <div class="toy-user">👤 ${t.userName||'Usuario'}</div>
-      </div>
+      <div class="hist-price">${t.compra ? '$'+Number(t.compra).toLocaleString() : '—'}</div>
     </div>`).join('');
 };
 
@@ -853,7 +913,18 @@ window.editToy = () => {
   setSelect('f-origen', t.origen);
   setSelect('f-estado', t.estado);
   setSelect('f-caja', t.caja);
-  setSelect('f-cat', t.cat);
+  const predefinedCats = ['🤖 Robot','🐒 Animal','🎪 Payaso','🚗 Vehículo','👧 Muñeca','🎷 Músico','Otro'];
+  if (t.cat && !predefinedCats.includes(t.cat)) {
+    // Categoría personalizada — poner Otro y mostrar campo
+    const sel = document.getElementById('f-cat');
+    for(let o of sel.options) if(o.value==='Otro'||o.text==='Otro'){o.selected=true;break;}
+    const inp = document.getElementById('f-cat-nueva');
+    inp.style.display = 'block';
+    inp.value = t.cat;
+  } else {
+    setSelect('f-cat', t.cat);
+    document.getElementById('f-cat-nueva').style.display = 'none';
+  }
   if (t.fotoUrl) {
     currentPhoto = t.fotoUrl;
     document.getElementById('ph-preview').src = t.fotoUrl;
@@ -902,7 +973,9 @@ window.saveToy = async () => {
       origen: document.getElementById('f-origen').value,
       estado: document.getElementById('f-estado').value,
       caja: document.getElementById('f-caja').value,
-      cat: document.getElementById('f-cat').value,
+      cat: document.getElementById('f-cat').value === 'Otro' 
+        ? document.getElementById('f-cat-nueva').value.trim() || 'Otro'
+        : document.getElementById('f-cat').value,
       notas: document.getElementById('f-notas').value.trim(),
       fotoUrl,
       userId: currentUser.uid,
@@ -934,6 +1007,8 @@ window.clearForm = () => {
   resetPhoto();
   document.getElementById('ai-result').classList.remove('show');
   editingId = null;
+  document.getElementById('f-cat-nueva').style.display = 'none';
+  document.getElementById('f-cat-nueva').value = '';
   document.getElementById('section-title-agregar').textContent = '✨ Agregar juguete';
   document.getElementById('save-btn').textContent = '✅ Guardar en la nube';
 };
