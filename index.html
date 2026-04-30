@@ -1003,8 +1003,14 @@ window.openDetail = (id) => {
   document.getElementById('d-price').textContent = t.compra ? '$'+Number(t.compra).toLocaleString()+' USD' : 'Sin costo';
   document.getElementById('d-brand').textContent = [t.marca,t.anio,t.origen,`👤 ${t.userName||''}`].filter(Boolean).join(' · ');
   document.getElementById('d-img').innerHTML = t.fotoUrl
-    ? `<img src="${t.fotoUrl}" class="detail-img" onclick="openLightbox('${t.fotoUrl}')">`
+    ? `<img src="${t.fotoUrl}" class="detail-img" id="detail-photo" style="cursor:zoom-in">`
     : `<div class="detail-img-ph">🤖</div>`;
+  if (t.fotoUrl) {
+    setTimeout(() => {
+      const img = document.getElementById('detail-photo');
+      if (img) img.onclick = () => openLightbox(t.fotoUrl);
+    }, 100);
+  }
   const chips = [];
   if (t.estado) chips.push(`<span class="chip ac">${t.estado}</span>`);
   if (t.cat) chips.push(`<span class="chip tl">${t.cat}</span>`);
