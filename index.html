@@ -913,7 +913,18 @@ window.editToy = () => {
   setSelect('f-origen', t.origen);
   setSelect('f-estado', t.estado);
   setSelect('f-caja', t.caja);
-  setSelect('f-cat', t.cat);
+  const predefinedCats = ['🤖 Robot','🐒 Animal','🎪 Payaso','🚗 Vehículo','👧 Muñeca','🎷 Músico','Otro'];
+  if (t.cat && !predefinedCats.includes(t.cat)) {
+    // Categoría personalizada — poner Otro y mostrar campo
+    const sel = document.getElementById('f-cat');
+    for(let o of sel.options) if(o.value==='Otro'||o.text==='Otro'){o.selected=true;break;}
+    const inp = document.getElementById('f-cat-nueva');
+    inp.style.display = 'block';
+    inp.value = t.cat;
+  } else {
+    setSelect('f-cat', t.cat);
+    document.getElementById('f-cat-nueva').style.display = 'none';
+  }
   if (t.fotoUrl) {
     currentPhoto = t.fotoUrl;
     document.getElementById('ph-preview').src = t.fotoUrl;
