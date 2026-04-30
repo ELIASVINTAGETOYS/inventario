@@ -126,7 +126,7 @@ body {
 .search-input:focus { outline: none; border-color: var(--accent); }
 
 /* GRID */
-.toys-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.toys-grid { display: flex; flex-direction: column; }
 .toy-card {
   background: var(--card); border-radius: 16px; overflow: hidden;
   border: 2px solid var(--border); cursor: pointer; transition: all 0.2s;
@@ -677,16 +677,15 @@ window.renderGrid = () => {
   loading.style.display = 'none';
   empty.style.display = list.length ? 'none' : 'block';
   grid.innerHTML = list.map(t => `
-    <div class="toy-card" onclick="openDetail('${t.id}')">
-      <div class="toy-img-wrap">
-        ${t.fotoUrl ? `<img src="${t.fotoUrl}" loading="lazy">` : '🤖'}
+    <div class="hist-item" onclick="openDetail('${t.id}')">
+      <div class="hist-img">${t.fotoUrl ? `<img src="${t.fotoUrl}" loading="lazy">` : '🤖'}</div>
+      <div class="hist-info">
+        <div class="hist-name">${t.nombre}</div>
+        <div class="hist-brand">${t.marca||'Sin marca'}${t.anio?' · '+t.anio:''}</div>
+        ${t.cat?`<div class="hist-date">📦 ${t.cat}</div>`:''}
+        <div class="hist-user">👤 ${t.userName||'Usuario'}</div>
       </div>
-      <div class="toy-info">
-        <div class="toy-name">${t.nombre}</div>
-        <div class="toy-brand">${t.marca||'Sin marca'}</div>
-        <div class="toy-price">${t.compra ? '$'+Number(t.compra).toLocaleString() : '—'}</div>
-        <div class="toy-user">👤 ${t.userName||'Usuario'}</div>
-      </div>
+      <div class="hist-price">${t.compra ? '$'+Number(t.compra).toLocaleString() : '—'}</div>
     </div>`).join('');
 };
 
