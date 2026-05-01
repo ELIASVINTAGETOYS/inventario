@@ -369,8 +369,9 @@ body {
 
 <!-- COLECCIÓN -->
 <div class="view active" id="view-coleccion">
-  <div class="search-row">
-    <input class="search-input" id="search" placeholder="🔍 Buscar juguete, marca..." oninput="renderGrid()" style="flex:1">
+  <div class="search-row" style="position:relative">
+    <input class="search-input" id="search" placeholder="🔍 Buscar o filtrar por categoría..." oninput="onSearchType()" onfocus="showCats()" onblur="hideCats()" style="flex:1" autocomplete="off">
+    <div id="cat-dd" style="display:none;position:absolute;top:108%;left:0;right:0;background:var(--card);border:2px solid var(--accent);border-radius:14px;z-index:300;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.5)"></div>
   </div>
   <div id="cat-filters" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 10px 0;scrollbar-width:none"></div>
   <div class="toys-grid" id="toys-grid"></div>
@@ -672,10 +673,49 @@ window.onCatChange = () => {
 
 window.getCats = () => [...new Set(toys.map(t=>t.cat).filter(Boolean))].sort();
 
-window.setCatFilter = (cat) => {
+window.setCatFilter = (cat, fromDD) => {
   activeCat = activeCat === cat ? '' : cat;
+  if (fromDD) {
+    document.getElementById('cat-dd').style.display = 'none';
+    document.getElementById('search').value = activeCat;
+  }
   renderCatFilters();
   renderGrid();
+};
+
+window.showCats = () => {
+  renderCatDD('');
+  document.getElementById('cat-dd').style.display = 'block';
+};
+
+window.hideCats = () => {
+  setTimeout(() => {
+    const dd = document.getElementById('cat-dd');
+    if (dd) dd.style.display = 'none';
+  }, 200);
+};
+
+window.onSearchType = () => {
+  const q = document.getElementById('search').value.toLowerCase();
+  if (q) {
+    renderCatDD(q);
+    document.getElementById('cat-dd').style.display = 'block';
+    activeCat = '';
+    renderGrid();
+  } else {
+    activeCat = '';
+    document.getElementById('cat-dd').style.display = 'none';
+    renderGrid();
+  }
+};
+
+window.renderCatDD = (q) => {
+  const dd = document.getElementById('cat-dd');
+  const cats = getCats().filter(c => !q || c.toLowerCase().includes(q));
+  if (!cats.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = cats.map(c => 
+    `<div onmousedown="setCatFilter('${c}', true)" style="padding:11px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;border-bottom:1px solid var(--border);color:${activeCat===c?'var(--accent)':'var(--text)'}">${c} ${activeCat===c?'✓':''}</div>`
+  ).join('');
 };
 
 window.renderCatFilters = () => {
