@@ -1,37 +1,29 @@
 {
   "name": "Battery Vintage Toys",
   "short_name": "BatteryToys",
-  "description": "Inventario de juguetes vintage japoneses de hojalata",
+  "description": "Inventario de juguetes vintage japoneses de hojalata - Battery toys, cuerda y fricción",
   "start_url": "/inventario/",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#ff4444",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "scope": "/inventario/",
   "lang": "es",
+  "dir": "ltr",
+  "id": "/inventario/",
   "icons": [
-    {
-      "src": "https://raw.githubusercontent.com/ELIASVINTAGETOYS/inventario/main/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "https://raw.githubusercontent.com/ELIASVINTAGETOYS/inventario/main/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "screenshots": [],
   "categories": ["lifestyle", "utilities"],
   "shortcuts": [
     {
       "name": "Agregar juguete",
       "short_name": "Agregar",
-      "description": "Agrega un nuevo juguete a tu colección",
-      "url": "/inventario/#agregar",
-      "icons": [{ "src": "https://raw.githubusercontent.com/ELIASVINTAGETOYS/inventario/main/icon-192.png", "sizes": "192x192" }]
+      "url": "/inventario/",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }
