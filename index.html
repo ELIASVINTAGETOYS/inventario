@@ -294,7 +294,16 @@ body {
 .crop-container { position: relative; width: 100vw; height: 70vh; overflow: hidden; background: #000; touch-action: none; }
 #crop-image { position: absolute; cursor: default; user-select: none; }
 .crop-overlay { position: absolute; inset: 0; pointer-events: none; }
-.crop-box { position: absolute; border: 3px solid white; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); border-radius: 4px; }
+.crop-box { position: absolute; border: 2px solid white; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55); border-radius: 2px; }
+.crop-handle { position: absolute; width: 22px; height: 22px; background: white; border-radius: 4px; }
+.crop-handle.tl { top: -11px; left: -11px; }
+.crop-handle.tr { top: -11px; right: -11px; }
+.crop-handle.bl { bottom: -11px; left: -11px; }
+.crop-handle.br { bottom: -11px; right: -11px; }
+.crop-handle.t  { top: -11px; left: calc(50% - 11px); }
+.crop-handle.b  { bottom: -11px; left: calc(50% - 11px); }
+.crop-handle.l  { top: calc(50% - 11px); left: -11px; }
+.crop-handle.r  { top: calc(50% - 11px); right: -11px; }
 .crop-actions { display: flex; gap: 12px; padding: 16px; width: 100%; justify-content: center; background: #111; }
 .crop-btn { flex: 1; max-width: 160px; padding: 14px; border: none; border-radius: 14px; font-family: 'Fredoka One', cursive; font-size: 1rem; cursor: pointer; }
 .crop-btn.ok { background: var(--teal); color: white; }
@@ -578,11 +587,20 @@ body {
 
 <!-- RECORTADOR -->
 <div id="crop-modal">
-  <div class="crop-hint">📌 Mueve el cuadro con un dedo · Pellizca para cambiar tamaño</div>
+  <div class="crop-hint">↔️ Jala las esquinas o los lados para recortar · Mueve dentro del cuadro para moverlo</div>
   <div class="crop-container" id="crop-container">
     <img id="crop-image" draggable="false">
     <div class="crop-overlay">
-      <div class="crop-box" id="crop-box"></div>
+      <div class="crop-box" id="crop-box">
+        <div class="crop-handle tl"></div>
+        <div class="crop-handle tr"></div>
+        <div class="crop-handle bl"></div>
+        <div class="crop-handle br"></div>
+        <div class="crop-handle t"></div>
+        <div class="crop-handle b"></div>
+        <div class="crop-handle l"></div>
+        <div class="crop-handle r"></div>
+      </div>
     </div>
   </div>
   <div class="crop-actions">
@@ -859,13 +877,161 @@ function setPhoto(dataUrl) {
 let cropImgSrc = '';
 let cropNaturalW = 0, cropNaturalH = 0;
 let cropImgX = 0, cropImgY = 0, cropImgW = 0, cropImgH = 0;
-// Cuadro de recorte en coordenadas de pantalla
-let boxX = 0, boxY = 0, boxSize = 0;
-// Touch
-let cropTouchMode = ''; // 'move' | 'resize'
+let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
+let cropHandle = ''; // qué handle se está arrastrando
 let cropTouchStartX = 0, cropTouchStartY = 0;
-let cropBoxStartX = 0, cropBoxStartY = 0, cropBoxStartSize = 0;
-let cropPinchDist0 = 0, cropPinchCx = 0, cropPinchCy = 0;
+let cropBoxStart = {};
+
+function openCrop(dataUrl) {
+  cropImgSrc = dataUrl;
+  const modal = document.getElementById('crop-modal');
+  const img = document.getElementById('crop-image');
+  modal.classList.add('open');
+  img.onload = () => {
+    cropNaturalW = img.naturalWidth;
+    cropNaturalH = img.naturalHeight;
+    const container = document.getElementById('crop-container');
+    const cw = container.offsetWidth;
+    const ch = container.offsetHeight;
+    const scale = Math.max(cw / cropNaturalW, ch / cropNaturalH);
+    cropImgW = cropNaturalW * scale;
+    cropImgH = cropNaturalH * scale;
+    cropImgX = (cw - cropImgW) / 2;
+    cropImgY = (ch - cropImgH) / 2;
+    img.style.left = cropImgX + 'px';
+    img.style.top = cropImgY + 'px';
+    img.style.width = cropImgW + 'px';
+    img.style.height = cropImgH + 'px';
+    img.style.transform = '';
+    // Cuadro inicial: 75% centrado
+    boxW = cw * 0.75;
+    boxH = ch * 0.75;
+    boxX = (cw - boxW) / 2;
+    boxY = (ch - boxH) / 2;
+    updateCropBox();
+  };
+  img.src = dataUrl;
+  setupCropEvents();
+}
+
+function updateCropBox() {
+  const container = document.getElementById('crop-container');
+  const cw = container.offsetWidth;
+  const ch = container.offsetHeight;
+  const minSize = 40;
+  boxW = Math.max(minSize, Math.min(boxW, cw));
+  boxH = Math.max(minSize, Math.min(boxH, ch));
+  boxX = Math.max(0, Math.min(boxX, cw - boxW));
+  boxY = Math.max(0, Math.min(boxY, ch - boxH));
+  const box = document.getElementById('crop-box');
+  box.style.left = boxX + 'px';
+  box.style.top = boxY + 'px';
+  box.style.width = boxW + 'px';
+  box.style.height = boxH + 'px';
+}
+
+function getHandle(tx, ty) {
+  const margin = 28;
+  const cx = boxX + boxW / 2;
+  const cy = boxY + boxH / 2;
+  const onL = Math.abs(tx - boxX) < margin;
+  const onR = Math.abs(tx - (boxX + boxW)) < margin;
+  const onT = Math.abs(ty - boxY) < margin;
+  const onB = Math.abs(ty - (boxY + boxH)) < margin;
+  const midX = Math.abs(tx - cx) < margin;
+  const midY = Math.abs(ty - cy) < margin;
+  if (onT && onL) return 'tl';
+  if (onT && onR) return 'tr';
+  if (onB && onL) return 'bl';
+  if (onB && onR) return 'br';
+  if (onT && midX) return 't';
+  if (onB && midX) return 'b';
+  if (onL && midY) return 'l';
+  if (onR && midY) return 'r';
+  // dentro del cuadro = mover
+  if (tx > boxX && tx < boxX+boxW && ty > boxY && ty < boxY+boxH) return 'move';
+  return '';
+}
+
+function setupCropEvents() {
+  const container = document.getElementById('crop-container');
+  container.ontouchstart = null;
+  container.ontouchmove = null;
+  container.ontouchend = null;
+
+  container.ontouchstart = (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      const rect = container.getBoundingClientRect();
+      const tx = e.touches[0].clientX - rect.left;
+      const ty = e.touches[0].clientY - rect.top;
+      cropHandle = getHandle(tx, ty);
+      cropTouchStartX = tx;
+      cropTouchStartY = ty;
+      cropBoxStart = { x: boxX, y: boxY, w: boxW, h: boxH };
+    }
+  };
+
+  container.ontouchmove = (e) => {
+    e.preventDefault();
+    if (!cropHandle || e.touches.length !== 1) return;
+    const rect = container.getBoundingClientRect();
+    const tx = e.touches[0].clientX - rect.left;
+    const ty = e.touches[0].clientY - rect.top;
+    const dx = tx - cropTouchStartX;
+    const dy = ty - cropTouchStartY;
+    const s = cropBoxStart;
+    if (cropHandle === 'move') {
+      boxX = s.x + dx; boxY = s.y + dy;
+    } else if (cropHandle === 'tl') {
+      boxX = s.x + dx; boxY = s.y + dy; boxW = s.w - dx; boxH = s.h - dy;
+    } else if (cropHandle === 'tr') {
+      boxY = s.y + dy; boxW = s.w + dx; boxH = s.h - dy;
+    } else if (cropHandle === 'bl') {
+      boxX = s.x + dx; boxW = s.w - dx; boxH = s.h + dy;
+    } else if (cropHandle === 'br') {
+      boxW = s.w + dx; boxH = s.h + dy;
+    } else if (cropHandle === 't') {
+      boxY = s.y + dy; boxH = s.h - dy;
+    } else if (cropHandle === 'b') {
+      boxH = s.h + dy;
+    } else if (cropHandle === 'l') {
+      boxX = s.x + dx; boxW = s.w - dx;
+    } else if (cropHandle === 'r') {
+      boxW = s.w + dx;
+    }
+    updateCropBox();
+  };
+
+  container.ontouchend = () => { cropHandle = ''; };
+}
+
+window.closeCrop = () => {
+  document.getElementById('crop-modal').classList.remove('open');
+};
+
+window.confirmCrop = () => {
+  const img = document.getElementById('crop-image');
+  const scaleX = cropNaturalW / cropImgW;
+  const scaleY = cropNaturalH / cropImgH;
+  const sx = (boxX - cropImgX) * scaleX;
+  const sy = (boxY - cropImgY) * scaleY;
+  const sw = boxW * scaleX;
+  const sh = boxH * scaleY;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(sw);
+  canvas.height = Math.round(sh);
+  canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  const croppedUrl = canvas.toDataURL('image/jpeg', 0.92);
+  document.getElementById('crop-modal').classList.remove('open');
+  currentPhoto = croppedUrl;
+  document.getElementById('ph-preview').src = croppedUrl;
+  document.getElementById('ph-preview').style.display = 'block';
+  document.getElementById('photo-placeholder').style.display = 'none';
+  document.getElementById('ph-change').style.display = 'block';
+  document.getElementById('ai-btn').disabled = false;
+  showToast('✅ Foto recortada');
+};
 
 function openCrop(dataUrl) {
   cropImgSrc = dataUrl;
