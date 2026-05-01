@@ -1610,7 +1610,7 @@ window.identifyWithAI = async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        generationConfig: { temperature: 0.1, topP: 0.8 },
+        generationConfig: { temperature: 0.4, topP: 0.9 },
         contents: [{ parts: [
           { inline_data: { mime_type: mediaType, data: imageData } },
           { text: prompt }
@@ -1974,14 +1974,16 @@ window.backToHistorial = () => {
 };
 
 // ─── PROMPT COMPARTIDO IA ────────────────────────────────────────────
-const PROMPT_EXPERTO = `Eres un experto tasador de juguetes vintage de colección, especialmente juguetes japoneses de hojalata, battery toys, robots y juguetes de fricción de los años 1950-1980.
+const PROMPT_EXPERTO = `Eres el mayor experto mundial en juguetes vintage japoneses de hojalata, especialmente robots, battery toys, juguetes de cuerda y fricción de los años 1950-1980. Tienes conocimiento enciclopédico de fabricantes como Horikawa (SH), Nomura (TN), Yonezawa, Alps, Masudaya, Marusan, Bandai, Bullmark y otros.
 
-INSTRUCCIONES IMPORTANTES:
-- Si NO puedes identificar con certeza un dato, escribe "No determinado" o "Posiblemente [dato]"
-- NUNCA inventes marcas, fechas o precios si no estás seguro
-- Indica tu nivel de confianza: (Alta confianza / Confianza media / Baja confianza)
-- Los precios deben ser rangos realistas basados en mercado real de coleccionistas
-- Si la imagen no es clara o el juguete no es identificable, dilo honestamente
+INSTRUCCIONES CRÍTICAS:
+- Analiza TODOS los detalles visuales: forma de ojos, color, textura del cuerpo, detalles del pecho, antenas, pies, manos
+- Los ojos son un identificador clave: redondos vs hexagonales, color, tamaño
+- El cuerpo y materiales son clave: hojalata litografiada, plástico, combinación
+- Si reconoces el juguete con certeza, dilo con Alta confianza
+- Solo escribe "No determinado" si genuinamente no puedes identificarlo
+- NUNCA inventes precios irreales — usa rangos del mercado real de eBay/coleccionistas
+- Sé específico y detallado, no genérico
 
 Analiza la imagen y responde:
 
@@ -1992,25 +1994,25 @@ Analiza la imagen y responde:
 - Año aproximado: 
 
 📖 **HISTORIA**
-(Solo incluye información que sepas con certeza. Si no tienes datos confiables, escríbelo)
+(Historia específica de ESTE modelo, no genérica. Incluye variantes conocidas si las hay)
 
 💰 **VALUACIÓN ESTIMADA**
-(Rangos aproximados, pueden variar según condición real y mercado actual)
+(Basada en ventas reales en eBay y mercado de coleccionistas)
 - Estado pobre: $__ - $__ USD
 - Estado bueno: $__ - $__ USD
-- Estado mint: $__ - $__ USD
+- Estado mint con caja: $__ - $__ USD
 
-⚠️ Nota: Los precios son estimados. Verifica en eBay o foros de coleccionistas para valores actuales.
+⚠️ Los precios son estimados. Verifica en eBay para valores actuales.
 
 🏆 **RAREZA**
-- Nivel: 
+- Nivel: (Común / Poco común / Raro / Muy raro)
 - Por qué:
 
 🔍 **AUTENTICIDAD**
-(Solo si tienes información confiable sobre este modelo específico)
+(Detalles específicos para verificar si es original)
 
-📈 **TENDENCIA**
-(Solo si tienes datos reales del mercado)`;
+📈 **TENDENCIA DE MERCADO**
+(¿Está subiendo o bajando de valor? ¿Por qué?)`;
 let valPhoto = null;
 
 window.onValPhoto = (input) => {
@@ -2093,7 +2095,7 @@ window.valuarJuguete = async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        generationConfig: { temperature: 0.1, topP: 0.8 },
+        generationConfig: { temperature: 0.4, topP: 0.9 },
         contents: [{ parts: [
           { inline_data: { mime_type: mediaType, data: imageData } },
           { text: prompt }
