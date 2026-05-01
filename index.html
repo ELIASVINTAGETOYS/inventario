@@ -1610,6 +1610,7 @@ window.identifyWithAI = async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        generationConfig: { temperature: 0.1, topP: 0.8 },
         contents: [{ parts: [
           { inline_data: { mime_type: mediaType, data: imageData } },
           { text: prompt }
@@ -2092,6 +2093,7 @@ window.valuarJuguete = async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        generationConfig: { temperature: 0.1, topP: 0.8 },
         contents: [{ parts: [
           { inline_data: { mime_type: mediaType, data: imageData } },
           { text: prompt }
