@@ -993,6 +993,9 @@ window.saveToy = async () => {
   btn.innerHTML = '<div class="loading"></div> Guardando en la nube...';
   btn.disabled = true;
 
+  // Capturar editingId ANTES de cualquier await para evitar duplicados
+  const savedEditingId = editingId;
+
   try {
     // Comprimir foto para Firestore (max ~500KB)
     let fotoUrl = '';
@@ -1028,8 +1031,8 @@ window.saveToy = async () => {
       userName: currentUser.displayName || 'Usuario',
       userEmail: currentUser.email,
     };
-    if (editingId) {
-      await updateDoc(doc(db, 'toys', editingId), toyData);
+    if (savedEditingId) {
+      await updateDoc(doc(db, 'toys', savedEditingId), toyData);
       editingId = null;
     } else {
       toyData.fecha = new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'});
@@ -1088,7 +1091,19 @@ window.openDetail = (id) => {
       <div class="info-row"><span>Costo</span><span class="val" style="color:var(--gold)">$${Number(t.compra).toLocaleString()} USD</span></div>
     </div>`;
   }
-  if (t.notas) sections += `<div class="info-card"><h4>📖 Historia</h4><p style="font-size:0.88rem;line-height:1.6">${t.notas}</p></div>`;
+  // Mostrar datos completos del juguete
+  const detalles = [];
+  if (t.marca) detalles.push({label:'🏭 Marca', val: t.marca});
+  if (t.anio) detalles.push({label:'📅 Año', val: t.anio});
+  if (t.origen) detalles.push({label:'🌍 Origen', val: t.origen});
+  if (t.estado) detalles.push({label:'⭐ Estado', val: t.estado});
+  if (t.caja) detalles.push({label:'📦 Caja', val: t.caja === 'si' ? 'Con caja original' : t.caja === 'inc' ? 'Incompleta' : 'Sin caja'});
+  if (detalles.length) {
+    sections += `<div class="info-card"><h4>📋 Detalles</h4>
+      ${detalles.map(d => `<div class="info-row"><span>${d.label}</span><span class="val">${d.val}</span></div>`).join('')}
+    </div>`;
+  }
+  if (t.notas) sections += `<div class="info-card"><h4>📖 Historia / Descripción IA</h4><p style="font-size:0.88rem;line-height:1.6">${t.notas}</p></div>`;
   document.getElementById('d-sections').innerHTML = sections;
   document.getElementById('detail-overlay').classList.add('open');
 };
