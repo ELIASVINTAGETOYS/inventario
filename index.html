@@ -288,6 +288,19 @@ body {
 .info-row:last-child { border-bottom: none; }
 .info-row .val { font-weight: 700; }
 
+/* RECORTADOR */
+#crop-modal { display: none; position: fixed; inset: 0; background: #000; z-index: 950; flex-direction: column; align-items: center; justify-content: center; }
+#crop-modal.open { display: flex; }
+.crop-container { position: relative; width: 100vw; height: 70vh; overflow: hidden; background: #000; touch-action: none; }
+#crop-image { position: absolute; transform-origin: 0 0; cursor: grab; user-select: none; }
+.crop-overlay { position: absolute; inset: 0; pointer-events: none; }
+.crop-box { position: absolute; border: 3px solid white; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); border-radius: 4px; }
+.crop-actions { display: flex; gap: 12px; padding: 16px; width: 100%; justify-content: center; background: #111; }
+.crop-btn { flex: 1; max-width: 160px; padding: 14px; border: none; border-radius: 14px; font-family: 'Fredoka One', cursive; font-size: 1rem; cursor: pointer; }
+.crop-btn.ok { background: var(--teal); color: white; }
+.crop-btn.cancel { background: var(--card2); color: var(--muted); border: 2px solid var(--border); }
+.crop-hint { color: rgba(255,255,255,0.6); font-size: 0.75rem; text-align: center; padding: 8px; background: #111; width: 100%; }
+
 /* CÁMARA */
 #camera-modal { display: none; position: fixed; inset: 0; background: #000; z-index: 900; flex-direction: column; }
 #cam-video { flex: 1; width: 100%; object-fit: cover; }
@@ -563,6 +576,21 @@ body {
   </div>
 </div>
 
+<!-- RECORTADOR -->
+<div id="crop-modal">
+  <div class="crop-hint">📌 Mueve y pellizca para ajustar · El cuadro blanco es lo que se recortará</div>
+  <div class="crop-container" id="crop-container">
+    <img id="crop-image" draggable="false">
+    <div class="crop-overlay">
+      <div class="crop-box" id="crop-box"></div>
+    </div>
+  </div>
+  <div class="crop-actions">
+    <button class="crop-btn cancel" onclick="closeCrop()">✕ Cancelar</button>
+    <button class="crop-btn ok" onclick="confirmCrop()">✂️ Recortar</button>
+  </div>
+</div>
+
 <!-- CÁMARA -->
 <div id="camera-modal">
   <video id="cam-video" autoplay playsinline></video>
@@ -824,13 +852,127 @@ window.onPhoto = (input) => {
 };
 
 function setPhoto(dataUrl) {
-  currentPhoto = dataUrl;
-  document.getElementById('ph-preview').src = dataUrl;
+  openCrop(dataUrl);
+}
+
+// ─── RECORTADOR ───────────────────────────────────────────────────────
+let cropImgSrc = '';
+let cropScale = 1;
+let cropX = 0, cropY = 0;
+let cropStartX = 0, cropStartY = 0;
+let cropDragging = false;
+let cropPinchDist = 0;
+
+function openCrop(dataUrl) {
+  cropImgSrc = dataUrl;
+  const modal = document.getElementById('crop-modal');
+  const img = document.getElementById('crop-image');
+  modal.classList.add('open');
+  img.onload = () => {
+    const container = document.getElementById('crop-container');
+    const cw = container.offsetWidth;
+    const ch = container.offsetHeight;
+    // Escalar imagen para que quepa en el contenedor
+    cropScale = Math.min(cw / img.naturalWidth, ch / img.naturalHeight);
+    cropX = (cw - img.naturalWidth * cropScale) / 2;
+    cropY = (ch - img.naturalHeight * cropScale) / 2;
+    updateCropImage();
+    // Caja de recorte: cuadrado centrado 80% del ancho
+    const size = Math.min(cw, ch) * 0.8;
+    const box = document.getElementById('crop-box');
+    box.style.width = size + 'px';
+    box.style.height = size + 'px';
+    box.style.left = (cw - size) / 2 + 'px';
+    box.style.top = (ch - size) / 2 + 'px';
+  };
+  img.src = dataUrl;
+  setupCropEvents();
+}
+
+function updateCropImage() {
+  const img = document.getElementById('crop-image');
+  img.style.transform = `translate(${cropX}px, ${cropY}px) scale(${cropScale})`;
+  img.style.transformOrigin = '0 0';
+}
+
+function setupCropEvents() {
+  const container = document.getElementById('crop-container');
+  container.ontouchstart = (e) => {
+    if (e.touches.length === 1) {
+      cropDragging = true;
+      cropStartX = e.touches[0].clientX - cropX;
+      cropStartY = e.touches[0].clientY - cropY;
+    } else if (e.touches.length === 2) {
+      cropPinchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+    e.preventDefault();
+  };
+  container.ontouchmove = (e) => {
+    if (e.touches.length === 1 && cropDragging) {
+      cropX = e.touches[0].clientX - cropStartX;
+      cropY = e.touches[0].clientY - cropStartY;
+      updateCropImage();
+    } else if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const delta = dist / cropPinchDist;
+      cropScale = Math.max(0.2, Math.min(5, cropScale * delta));
+      cropPinchDist = dist;
+      updateCropImage();
+    }
+    e.preventDefault();
+  };
+  container.ontouchend = () => { cropDragging = false; };
+  // Mouse (desktop)
+  container.onmousedown = (e) => { cropDragging = true; cropStartX = e.clientX - cropX; cropStartY = e.clientY - cropY; };
+  container.onmousemove = (e) => { if (cropDragging) { cropX = e.clientX - cropStartX; cropY = e.clientY - cropStartY; updateCropImage(); } };
+  container.onmouseup = () => { cropDragging = false; };
+  container.onwheel = (e) => { cropScale = Math.max(0.2, Math.min(5, cropScale * (e.deltaY > 0 ? 0.9 : 1.1))); updateCropImage(); e.preventDefault(); };
+}
+
+window.closeCrop = () => {
+  document.getElementById('crop-modal').classList.remove('open');
+};
+
+window.confirmCrop = () => {
+  const img = document.getElementById('crop-image');
+  const container = document.getElementById('crop-container');
+  const box = document.getElementById('crop-box');
+  const boxRect = box.getBoundingClientRect();
+  const contRect = container.getBoundingClientRect();
+  // Calcular coordenadas relativas al contenedor
+  const bx = boxRect.left - contRect.left;
+  const by = boxRect.top - contRect.top;
+  const bw = boxRect.width;
+  const bh = boxRect.height;
+  // Convertir a coordenadas de imagen original
+  const sx = (bx - cropX) / cropScale;
+  const sy = (by - cropY) / cropScale;
+  const sw = bw / cropScale;
+  const sh = bh / cropScale;
+  // Dibujar en canvas
+  const canvas = document.createElement('canvas');
+  const size = Math.min(sw, sh);
+  canvas.width = 600;
+  canvas.height = 600;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 600, 600);
+  const croppedUrl = canvas.toDataURL('image/jpeg', 0.85);
+  document.getElementById('crop-modal').classList.remove('open');
+  // Aplicar foto recortada
+  currentPhoto = croppedUrl;
+  document.getElementById('ph-preview').src = croppedUrl;
   document.getElementById('ph-preview').style.display = 'block';
   document.getElementById('photo-placeholder').style.display = 'none';
   document.getElementById('ph-change').style.display = 'block';
   document.getElementById('ai-btn').disabled = false;
-}
+  showToast('✅ Foto recortada');
+};
 
 window.resetPhoto = () => {
   currentPhoto = null;
