@@ -187,18 +187,36 @@ body {
 .video-area {
   width: 100%; background: #080815;
   border: 3px dashed var(--border); border-radius: 18px;
-  overflow: hidden; position: relative; transition: border-color 0.2s;
-  min-height: 80px;
+  overflow: hidden; position: relative; transition: border-color 0.2s; min-height: 80px;
 }
 .video-area:hover { border-color: var(--teal); }
 .video-placeholder { display: flex; gap: 10px; padding: 20px; }
-.video-preview { width: 100%; max-height: 220px; display: none; border-radius: 14px; object-fit: cover; background: #000; }
+.video-preview { width: 100%; max-height: 220px; display: none; border-radius: 14px; background: #000; }
 .video-change-btn {
   position: absolute; bottom: 10px; right: 10px;
-  background: rgba(0,0,0,0.7); border: none; border-radius: 10px;
+  background: rgba(0,0,0,0.75); border: none; border-radius: 10px;
   color: white; padding: 6px 12px; font-size: 0.78rem; font-weight: 700;
   cursor: pointer; font-family: 'Nunito', sans-serif; display: none;
 }
+#video-recorder-modal {
+  display: none; position: fixed; inset: 0; background: #000; z-index: 960; flex-direction: column;
+}
+#video-recorder-modal.open { display: flex; }
+#rec-video { flex: 1; width: 100%; object-fit: cover; }
+.rec-top { position: absolute; top: 0; left: 0; right: 0; padding: 16px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to bottom,rgba(0,0,0,0.7),transparent); }
+.rec-timer { font-family: 'Fredoka One',cursive; font-size: 1.8rem; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+.rec-timer.recording { color: #ff3d6b; }
+.rec-close-btn { background: rgba(0,0,0,0.6); border: 2px solid white; color: white; border-radius: 12px; padding: 8px 16px; font-family: 'Nunito',sans-serif; font-weight: 800; cursor: pointer; }
+.rec-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 30px 20px 50px; display: flex; justify-content: center; align-items: center; gap: 32px; background: linear-gradient(to top,rgba(0,0,0,0.7),transparent); }
+.rec-shoot { width: 80px; height: 80px; border-radius: 50%; border: 5px solid white; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.5); transition: all 0.2s; }
+.rec-shoot.recording { background: #ff3d6b; border-color: #ff3d6b; font-size: 1.4rem; }
+.rec-progress { position: absolute; bottom: 0; left: 0; height: 4px; background: #ff3d6b; transition: width 0.25s linear; width: 0%; }
+.rec-compressing { position: absolute; inset: 0; background: rgba(0,0,0,0.88); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: white; }
+.rec-compressing.show { display: flex; }
+.rec-compressing p { font-size: 1rem; font-weight: 700; text-align: center; }
+.rec-compress-bar { width: 220px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+.rec-compress-fill { height: 100%; background: var(--teal); border-radius: 3px; transition: width 0.2s; width: 0%; }
+
 .form-group label { font-size: 0.72rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .form-group input, .form-group textarea, .form-group select {
   background: var(--card); border: 2px solid var(--border);
@@ -480,6 +498,16 @@ body {
     </div>
     <input type="file" accept="image/*" id="photo-gallery" style="display:none" onchange="onPhoto(this)">
 
+    <!-- VIDEO -->
+    <div class="form-group"><label>🎬 Video del juguete (opcional)</label></div>
+    <div class="video-area" id="video-area">
+      <div id="video-placeholder" class="video-placeholder">
+        <button class="photo-btn" onclick="openVideoRecorder()">⏺️ Grabar video</button>
+      </div>
+      <video id="vid-preview" class="video-preview" controls playsinline></video>
+      <button id="vid-change" class="video-change-btn" onclick="resetVideo()">✏️ Cambiar</button>
+    </div>
+
     <button class="btn btn-primary" id="save-btn" onclick="saveToy()" style="margin-bottom:8px">✅ Guardar en la nube</button>
     <button class="ai-btn" id="ai-btn" onclick="identifyWithAI()" disabled>🤖 Identificar con IA</button>
     <div class="ai-result" id="ai-result"></div>
@@ -623,6 +651,26 @@ body {
   </div>
 </div>
 
+<!-- GRABADOR VIDEO -->
+<div id="video-recorder-modal">
+  <video id="rec-video" autoplay playsinline muted></video>
+  <div class="rec-top">
+    <div class="rec-timer" id="rec-timer">⏺ 0:00</div>
+    <button class="rec-close-btn" onclick="closeVideoRecorder()">✕ Cancelar</button>
+  </div>
+  <div class="rec-bottom">
+    <div style="color:rgba(255,255,255,0.7);font-size:0.75rem;text-align:center">Máx 10 seg<br>Baja resolución</div>
+    <div class="rec-shoot" id="rec-shoot-btn" onclick="toggleRecording()">⏺</div>
+    <div style="width:80px"></div>
+  </div>
+  <div class="rec-progress" id="rec-progress"></div>
+  <div class="rec-compressing" id="rec-compressing">
+    <div style="font-size:2rem">⚙️</div>
+    <p>Comprimiendo video...<br><span style="font-size:0.8rem;opacity:0.7">Esto toma unos segundos</span></p>
+    <div class="rec-compress-bar"><div class="rec-compress-fill" id="rec-compress-fill"></div></div>
+  </div>
+</div>
+
 <!-- CÁMARA -->
 <div id="camera-modal">
   <video id="cam-video" autoplay playsinline></video>
@@ -665,6 +713,8 @@ let toys = [];
 let currentId = null;
 let editingId = null;
 let currentPhoto = null;
+let currentVideo = null;
+let recStream = null, recMediaRecorder = null, recChunks = [], recInterval = null, recSeconds = 0;
 let currentAiDesc = '';
 let camStream = null;
 let facingMode = 'environment';
@@ -1056,6 +1106,167 @@ window.resetPhoto = () => {
   document.getElementById('ai-btn').disabled = true;
 };
 
+// ─── VIDEO GRABADOR ───────────────────────────────────────────────────
+const MAX_REC_SECONDS = 10;
+
+window.resetVideo = () => {
+  currentVideo = null;
+  const vid = document.getElementById('vid-preview');
+  vid.src = ''; vid.style.display = 'none';
+  document.getElementById('video-placeholder').style.display = 'flex';
+  document.getElementById('vid-change').style.display = 'none';
+};
+
+window.openVideoRecorder = async () => {
+  try {
+    recStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 480 }, height: { ideal: 360 } },
+      audio: true
+    });
+    document.getElementById('rec-video').srcObject = recStream;
+    document.getElementById('video-recorder-modal').classList.add('open');
+    recSeconds = 0;
+    document.getElementById('rec-timer').textContent = '⏺ 0:00';
+    document.getElementById('rec-progress').style.width = '0%';
+    document.getElementById('rec-shoot-btn').className = 'rec-shoot';
+    document.getElementById('rec-shoot-btn').textContent = '⏺';
+    document.getElementById('rec-compressing').classList.remove('show');
+  } catch(e) {
+    showToast('⚠️ No se pudo acceder a la cámara');
+  }
+};
+
+window.closeVideoRecorder = () => {
+  if (recMediaRecorder && recMediaRecorder.state === 'recording') recMediaRecorder.stop();
+  if (recStream) recStream.getTracks().forEach(t => t.stop());
+  clearInterval(recInterval);
+  document.getElementById('video-recorder-modal').classList.remove('open');
+};
+
+window.toggleRecording = () => {
+  if (recMediaRecorder && recMediaRecorder.state === 'recording') {
+    recMediaRecorder.stop();
+    return;
+  }
+  // Elegir el mejor codec disponible y baja bitrate
+  const mimeTypes = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+  const mime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+  recChunks = [];
+  recMediaRecorder = new MediaRecorder(recStream, {
+    mimeType: mime || undefined,
+    videoBitsPerSecond: 150000, // 150 kbps — baja calidad pero pesa poco
+    audioBitsPerSecond: 32000
+  });
+  recMediaRecorder.ondataavailable = e => { if (e.data.size > 0) recChunks.push(e.data); };
+  recMediaRecorder.onstop = () => processVideo();
+  recMediaRecorder.start(100);
+
+  // UI
+  document.getElementById('rec-shoot-btn').className = 'rec-shoot recording';
+  document.getElementById('rec-shoot-btn').textContent = '⏹';
+  const timer = document.getElementById('rec-timer');
+  timer.className = 'rec-timer recording';
+  recSeconds = 0;
+  recInterval = setInterval(() => {
+    recSeconds++;
+    const s = recSeconds % 60;
+    const m = Math.floor(recSeconds / 60);
+    timer.textContent = `⏺ ${m}:${s.toString().padStart(2,'0')}`;
+    document.getElementById('rec-progress').style.width = (recSeconds / MAX_REC_SECONDS * 100) + '%';
+    if (recSeconds >= MAX_REC_SECONDS) {
+      clearInterval(recInterval);
+      recMediaRecorder.stop();
+    }
+  }, 1000);
+};
+
+async function processVideo() {
+  clearInterval(recInterval);
+  if (recStream) recStream.getTracks().forEach(t => t.stop());
+  
+  // Mostrar pantalla de compresión
+  const compEl = document.getElementById('rec-compressing');
+  const fillEl = document.getElementById('rec-compress-fill');
+  compEl.classList.add('show');
+  fillEl.style.width = '20%';
+
+  const blob = new Blob(recChunks, { type: recChunks[0]?.type || 'video/webm' });
+  fillEl.style.width = '60%';
+
+  // Si pesa menos de 900KB, usarlo directo
+  if (blob.size < 900 * 1024) {
+    const url = URL.createObjectURL(blob);
+    fillEl.style.width = '100%';
+    setTimeout(() => finishVideo(blob, url), 400);
+    return;
+  }
+
+  // Comprimir re-encodando frames con Canvas
+  try {
+    const url = URL.createObjectURL(blob);
+    const tempVid = document.createElement('video');
+    tempVid.src = url; tempVid.muted = true;
+    await new Promise(r => { tempVid.onloadedmetadata = r; tempVid.load(); });
+    
+    const duration = tempVid.duration;
+    const canvas = document.createElement('canvas');
+    canvas.width = 320; canvas.height = 240;
+    const ctx = canvas.getContext('2d');
+    
+    const stream = canvas.captureStream(12); // 12 fps
+    const mime2 = MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/webm';
+    const mr = new MediaRecorder(stream, { mimeType: mime2, videoBitsPerSecond: 120000 });
+    const chunks2 = [];
+    mr.ondataavailable = e => chunks2.push(e.data);
+
+    mr.start();
+    tempVid.play();
+    fillEl.style.width = '70%';
+
+    await new Promise(resolve => {
+      const drawFrame = () => {
+        ctx.drawImage(tempVid, 0, 0, 320, 240);
+        if (!tempVid.ended && !tempVid.paused) requestAnimationFrame(drawFrame);
+        else { mr.stop(); resolve(); }
+      };
+      tempVid.onplay = () => requestAnimationFrame(drawFrame);
+      tempVid.onended = () => { mr.stop(); resolve(); };
+      setTimeout(() => { mr.stop(); resolve(); }, (duration + 1) * 1000);
+    });
+
+    fillEl.style.width = '90%';
+    await new Promise(r => mr.onstop = r);
+    const blob2 = new Blob(chunks2, { type: mime2 });
+    const url2 = URL.createObjectURL(blob2);
+    fillEl.style.width = '100%';
+    setTimeout(() => finishVideo(blob2, url2), 300);
+  } catch(e) {
+    // Si falla la compresión, usar el original
+    const url = URL.createObjectURL(blob);
+    fillEl.style.width = '100%';
+    setTimeout(() => finishVideo(blob, url), 300);
+  }
+}
+
+function finishVideo(blob, url) {
+  document.getElementById('video-recorder-modal').classList.remove('open');
+  document.getElementById('rec-compressing').classList.remove('show');
+
+  // Convertir a base64 para guardar
+  const reader = new FileReader();
+  reader.onload = e => {
+    currentVideo = e.target.result;
+    const vid = document.getElementById('vid-preview');
+    vid.src = url;
+    vid.style.display = 'block';
+    document.getElementById('video-placeholder').style.display = 'none';
+    document.getElementById('vid-change').style.display = 'block';
+    const kb = Math.round(blob.size / 1024);
+    showToast(`✅ Video listo (${kb} KB)`);
+  };
+  reader.readAsDataURL(blob);
+}
+
 // ─── CÁMARA ───────────────────────────────────────────────────────────
 window.openCamera = async () => {
   const modal = document.getElementById('camera-modal');
@@ -1173,6 +1384,13 @@ window.editToy = () => {
   document.getElementById('f-compra').value = t.compra || '';
   document.getElementById('f-notas').value = t.notas || '';
   currentAiDesc = t.aiDesc || '';
+  if (t.videoUrl) {
+    currentVideo = t.videoUrl;
+    const vid = document.getElementById('vid-preview');
+    vid.src = t.videoUrl; vid.style.display = 'block';
+    document.getElementById('video-placeholder').style.display = 'none';
+    document.getElementById('vid-change').style.display = 'block';
+  } else { resetVideo(); }
   if (t.aiDesc) {
     const result = document.getElementById('ai-result');
     result.innerHTML = '<b style="color:var(--blue)">🤖 IA (guardada):</b><br><br>' + t.aiDesc.replace(/\n/g,'<br>');
@@ -1249,6 +1467,7 @@ window.saveToy = async () => {
         : document.getElementById('f-cat').value,
       notas: document.getElementById('f-notas').value.trim(),
       aiDesc: currentAiDesc || '',
+      videoUrl: currentVideo || '',
       fotoUrl,
       userId: currentUser.uid,
       userName: currentUser.displayName || 'Usuario',
@@ -1277,6 +1496,7 @@ window.clearForm = () => {
   ['f-nombre','f-marca','f-anio','f-compra','f-notas'].forEach(id => document.getElementById(id).value = '');
   ['f-origen','f-estado','f-caja','f-cat'].forEach(id => document.getElementById(id).selectedIndex = 0);
   resetPhoto();
+  resetVideo();
   currentAiDesc = '';
   document.getElementById('ai-result').classList.remove('show');
   editingId = null;
@@ -1332,6 +1552,7 @@ window.openDetail = (id) => {
     const formatted = t.aiDesc.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g,'<br>');
     sections += `<div class="info-card"><h4>🤖 IA</h4><p style="font-size:0.88rem;line-height:1.8;color:#ffffff">${formatted}</p></div>`;
   }
+  if (t.videoUrl) sections += `<div class="info-card"><h4>🎬 Video</h4><video src="${t.videoUrl}" controls playsinline style="width:100%;border-radius:10px;max-height:260px;background:#000;margin-top:4px"></video></div>`;
   document.getElementById('d-sections').innerHTML = sections;
   document.getElementById('detail-overlay').classList.add('open');
 };
