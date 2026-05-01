@@ -486,7 +486,7 @@ body {
     </div>
     <div class="video-area" id="video-area">
       <div id="video-placeholder" class="video-placeholder">
-        <button class="photo-btn" onclick="document.getElementById('video-gallery').click()">🎥 Subir video</button>
+        <button class="photo-btn" onclick="openVideoGallery()">🎥 Subir video</button>
         <button class="photo-btn secondary" onclick="recordVideo()">⏺️ Grabar</button>
       </div>
       <video id="vid-preview" class="video-preview" controls playsinline></video>
@@ -1091,6 +1091,12 @@ window.onVideo = (input) => {
 window.recordVideo = () => {
   const input = document.getElementById('video-gallery');
   input.setAttribute('capture', 'environment');
+  input.click();
+};
+
+window.openVideoGallery = () => {
+  const input = document.getElementById('video-gallery');
+  input.removeAttribute('capture');
   input.click();
 };
 
