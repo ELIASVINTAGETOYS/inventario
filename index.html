@@ -959,6 +959,11 @@ window.editToy = () => {
   document.getElementById('f-compra').value = t.compra || '';
   document.getElementById('f-notas').value = t.notas || '';
   currentAiDesc = t.aiDesc || '';
+  if (t.aiDesc) {
+    const result = document.getElementById('ai-result');
+    result.innerHTML = '<b style="color:var(--blue)">🤖 IA (guardada):</b><br><br>' + t.aiDesc.replace(/\n/g,'<br>');
+    result.classList.add('show');
+  }
   const setSelect = (id, val) => { const el = document.getElementById(id); for(let o of el.options) if(o.value===val||o.text===val){o.selected=true;break;} };
   setSelect('f-origen', t.origen);
   setSelect('f-estado', t.estado);
