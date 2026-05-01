@@ -778,9 +778,10 @@ body::before {
   <div id="val-panel-nuevo">
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Sube una foto y la IA analizará el juguete con historia, precio estimado y rareza.</p>
     <div class="photo-area" id="val-photo-area" style="height:100px;margin-bottom:12px">
-      <div id="val-placeholder" class="photo-btns">
-        <button class="photo-btn" onclick="openValCamera()">📷 Cámara</button>
-        <button class="photo-btn secondary" onclick="document.getElementById('val-gallery').click()">🖼️ Galería</button>
+      <div id="val-placeholder" class="photo-btns" style="flex-wrap:wrap;gap:8px">
+        <button class="photo-btn" onclick="openValCamera()" style="flex:1;min-width:80px">📷 Cámara</button>
+        <button class="photo-btn secondary" onclick="document.getElementById('val-gallery').click()" style="flex:1;min-width:80px">🖼️ Galería</button>
+        <button class="photo-btn secondary" onclick="openValColeccion()" style="flex:1;min-width:80px;border-color:var(--gold);color:var(--gold)">🧸 Colección</button>
       </div>
       <img id="val-preview" class="photo-preview-img" style="display:none">
       <button id="val-change" class="change-btn" style="display:none" onclick="resetValPhoto()">✏️ Cambiar</button>
@@ -996,6 +997,15 @@ body::before {
     <p>Comprimiendo video...<br><span style="font-size:0.8rem;opacity:0.7">Esto toma unos segundos</span></p>
     <div class="rec-compress-bar"><div class="rec-compress-fill" id="rec-compress-fill"></div></div>
   </div>
+</div>
+
+<!-- MODAL SELECCIONAR DE COLECCIÓN -->
+<div id="val-coleccion-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:800;flex-direction:column">
+  <div style="background:var(--card);padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)">
+    <button onclick="closeValColeccion()" style="background:var(--card2);border:none;color:var(--text);width:38px;height:38px;border-radius:10px;font-size:1.2rem;cursor:pointer">←</button>
+    <span style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--gold)">🧸 Elige un juguete</span>
+  </div>
+  <div id="val-coleccion-lista" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px"></div>
 </div>
 
 <!-- CÁMARA -->
@@ -1942,8 +1952,38 @@ window.onValPhoto = (input) => {
   reader.readAsDataURL(file);
 };
 
+window.openValColeccion = () => {
+  const modal = document.getElementById('val-coleccion-modal');
+  modal.style.display = 'flex';
+  const lista = document.getElementById('val-coleccion-lista');
+  if (!toys.length) {
+    lista.innerHTML = '<div class="empty"><div class="emoji">🧸</div><p>No tienes juguetes en tu colección</p></div>';
+    return;
+  }
+  lista.innerHTML = toys.map(t => `
+    <div class="hist-item" onclick="selectValFromColeccion('${t.id}')">
+      <div class="hist-img">${t.fotoUrl ? `<img src="${t.fotoUrl}">` : '🤖'}</div>
+      <div class="hist-info">
+        <div class="hist-name">${t.nombre}</div>
+        <div class="hist-brand">${t.marca||''}${t.anio?' · '+t.anio:''}</div>
+      </div>
+      <div style="color:var(--gold);font-size:1.2rem">›</div>
+    </div>`).join('');
+};
+
+window.closeValColeccion = () => {
+  document.getElementById('val-coleccion-modal').style.display = 'none';
+};
+
+window.selectValFromColeccion = (id) => {
+  const t = toys.find(x => x.id === id);
+  if (!t || !t.fotoUrl) { showToast('Este juguete no tiene foto'); return; }
+  closeValColeccion();
+  setValPhoto(t.fotoUrl);
+  showToast('✅ Foto de ' + t.nombre + ' seleccionada');
+};
+
 window.openValCamera = async () => {
-  // Reusar la cámara principal pero para valuación
   valCameraMode = true;
   openCamera();
 };
