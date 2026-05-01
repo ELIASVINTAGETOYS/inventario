@@ -1609,24 +1609,39 @@ window.identifyWithAI = async () => {
 
 INSTRUCCIONES IMPORTANTES:
 - Si NO puedes identificar con certeza un dato, escribe "No determinado" o "Posiblemente [dato]"
-- NUNCA inventes marcas, fechas o datos si no estás seguro
-- Indica tu nivel de confianza: (Alta / Media / Baja)
-- Sé honesto y preciso
+- NUNCA inventes marcas, fechas o precios si no estás seguro
+- Indica tu nivel de confianza: (Alta confianza / Confianza media / Baja confianza)
+- Los precios deben ser rangos realistas basados en mercado real de coleccionistas
+- Si la imagen no es clara o el juguete no es identificable, dilo honestamente
 
-Analiza esta imagen e identifica el juguete respondiendo así:
+Analiza la imagen y responde:
 
-🤖 **IDENTIFICACIÓN** (confianza: ___)
-**Nombre:** [nombre o "No determinado"]
-**Marca:** [fabricante o "No determinado" / "Posiblemente [marca]"]
-**País:** [país de origen o "No determinado"]
-**Año:** [año aproximado o "No determinado"]
-**Estado:** [Mint / Excelente / Bueno / Regular / Pobre]
+🤖 **IDENTIFICACIÓN** (nivel de confianza: ___)
+- Nombre del juguete: 
+- Fabricante/Marca: 
+- País de origen: 
+- Año aproximado: 
 
-📖 **DESCRIPCIÓN**
-[Descripción breve y honesta. Solo lo que puedas confirmar con la imagen]
+📖 **HISTORIA**
+(Solo incluye información que sepas con certeza. Si no tienes datos confiables, escríbelo)
 
-💰 **VALOR ESTIMADO**
-[Rango en USD según estado. Si no tienes datos confiables, indícalo]`;
+💰 **VALUACIÓN ESTIMADA**
+(Rangos aproximados, pueden variar según condición real y mercado actual)
+- Estado pobre: $__ - $__ USD
+- Estado bueno: $__ - $__ USD
+- Estado mint: $__ - $__ USD
+
+⚠️ Nota: Los precios son estimados. Verifica en eBay o foros de coleccionistas para valores actuales.
+
+🏆 **RAREZA**
+- Nivel: 
+- Por qué:
+
+🔍 **AUTENTICIDAD**
+(Solo si tienes información confiable sobre este modelo específico)
+
+📈 **TENDENCIA**
+(Solo si tienes datos reales del mercado)`;
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${window.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1693,13 +1708,21 @@ window.editToy = () => {
   document.getElementById('f-compra').value = t.compra || '';
   document.getElementById('f-notas').value = t.notas || '';
   currentAiDesc = t.aiDesc || '';
-  if (t.videoUrl) {
-    currentVideo = t.videoUrl;
-    const vid = document.getElementById('vid-preview');
-    vid.src = t.videoUrl; vid.style.display = 'block';
-    document.getElementById('video-placeholder').style.display = 'none';
-    document.getElementById('vid-change').style.display = 'block';
-  } else { resetVideo(); }
+  // Cargar video desde colección separada
+  currentVideo = null;
+  resetVideo();
+  if (t.hasVideo) {
+    getDoc(doc(db, 'toyvideos', t.id)).then(snap => {
+      if (snap.exists()) {
+        const videoData = snap.data().videoData;
+        currentVideo = videoData;
+        const vid = document.getElementById('vid-preview');
+        vid.src = videoData; vid.style.display = 'block';
+        document.getElementById('video-placeholder').style.display = 'none';
+        document.getElementById('vid-change').style.display = 'block';
+      }
+    }).catch(() => {});
+  }
   if (t.aiDesc) {
     const result = document.getElementById('ai-result');
     result.innerHTML = '<b style="color:var(--blue)">🤖 IA (guardada):</b><br><br>' + t.aiDesc.replace(/\n/g,'<br>');
