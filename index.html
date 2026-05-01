@@ -948,6 +948,7 @@ window.identifyWithAI = async () => {
 window.editToy = () => {
   const t = toys.find(x => x.id === currentId);
   if (!t) return;
+  editingId = t.id;
   closeDetail();
   switchNav('agregar');
   document.getElementById('section-title-agregar').textContent = '✏️ Editar juguete';
@@ -982,7 +983,6 @@ window.editToy = () => {
     document.getElementById('ph-change').style.display = 'block';
     document.getElementById('ai-btn').disabled = false;
   }
-  editingId = currentId;
   document.getElementById('app-content').scrollTop = 0;
 };
 
