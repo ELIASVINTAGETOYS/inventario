@@ -888,12 +888,15 @@ window.identifyWithAI = async () => {
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514', max_tokens: 1000,
         messages: [{ role: 'user', content: [
           { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: currentPhoto.split(',')[1] } },
-          { type: 'text', text: 'Eres experto en juguetes vintage. Identifica: Nombre:|Marca:|País:|Año:|Estado:|Valor estimado:$X-Y USD|Notas:' }
+          { type: 'text', text: 'Eres experto en juguetes vintage de colección. Analiza esta imagen e identifica el juguete. Responde EXACTAMENTE en este formato:\nNombre: [nombre del juguete]\nMarca: [fabricante]\nPaís: [país de origen]\nAño: [año aproximado]\nEstado: [Mint/Excelente/Bueno/Regular/Pobre]\nNotas: [descripción breve]' }
         ]}]
       })
     });
