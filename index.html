@@ -864,7 +864,7 @@ body::before {
     <div class="form-row">
       <div class="form-group">
         <label>🌍 Origen</label>
-        <select id="f-origen" onchange="toggleOrigenInput(this)">
+        <select id="f-origen" onchange="toggleOrigenInput(this)" onclick="toggleOrigenInput(this)">
           <option value="">País...</option>
           <option>Japón</option><option>Estados Unidos</option>
           <option>Alemania</option><option>Francia</option><option>España</option>
@@ -1119,8 +1119,10 @@ let activeCat = '';
 
 window.toggleOrigenInput = (sel) => {
   const inp = document.getElementById('f-origen-otro');
-  inp.style.display = sel.value === 'Otro' ? 'block' : 'none';
-  if (sel.value !== 'Otro') inp.value = '';
+  const show = sel.value === 'Otro';
+  inp.style.display = show ? 'block' : 'none';
+  if (show) setTimeout(() => inp.focus(), 100);
+  else inp.value = '';
 };
 
 window.onCatChange = () => {
