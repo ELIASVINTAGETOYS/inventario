@@ -659,7 +659,7 @@ body {
     <button class="rec-close-btn" onclick="closeVideoRecorder()">✕ Cancelar</button>
   </div>
   <div class="rec-bottom">
-    <div style="color:rgba(255,255,255,0.7);font-size:0.75rem;text-align:center">Máx 5 seg<br>Baja resolución</div>
+    <div style="color:rgba(255,255,255,0.7);font-size:0.75rem;text-align:center">Máx 15 seg<br>Baja resolución</div>
     <div class="rec-shoot" id="rec-shoot-btn" onclick="toggleRecording()">⏺</div>
     <div style="width:80px"></div>
   </div>
@@ -1107,7 +1107,7 @@ window.resetPhoto = () => {
 };
 
 // ─── VIDEO GRABADOR ───────────────────────────────────────────────────
-const MAX_REC_SECONDS = 5;
+const MAX_REC_SECONDS = 15;
 
 window.resetVideo = () => {
   currentVideo = null;
@@ -1495,6 +1495,7 @@ window.openDetail = (id) => {
   if (t.fecha) chips.push(`<span class="chip">📅 ${t.fecha}</span>`);
   document.getElementById('d-chips').innerHTML = chips.join('');
   let sections = '';
+  if (t.hasVideo) sections += `<div class="info-card" id="video-section"><h4>🎬 Video</h4><div id="video-loading" style="color:var(--muted);font-size:0.85rem;padding:8px">⏳ Cargando video...</div></div>`;
   if (t.compra) {
     sections += `<div class="info-card"><h4>💰 Costo</h4>
       <div class="info-row"><span>Costo</span><span class="val" style="color:var(--gold)">$${Number(t.compra).toLocaleString()} USD</span></div>
@@ -1517,7 +1518,6 @@ window.openDetail = (id) => {
     const formatted = t.aiDesc.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g,'<br>');
     sections += `<div class="info-card"><h4>🤖 IA</h4><p style="font-size:0.88rem;line-height:1.8;color:#ffffff">${formatted}</p></div>`;
   }
-  if (t.hasVideo) sections += `<div class="info-card" id="video-section"><h4>🎬 Video</h4><div id="video-loading" style="color:var(--muted);font-size:0.85rem;padding:8px">⏳ Cargando video...</div></div>`;
   document.getElementById('d-sections').innerHTML = sections;
   document.getElementById('detail-overlay').classList.add('open');
 
