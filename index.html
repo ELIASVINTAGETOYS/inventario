@@ -681,7 +681,7 @@ body::before {
     <div class="hstat">🧸 <b id="h-count">0</b> pzas</div>
     <div class="hstat">💰 <b id="h-usd">$0</b> Invertido</div>
     <div class="hstat">👤 <b id="h-user">—</b></div>
-    <div class="hstat" style="color:rgba(255,215,0,0.45);font-size:0.58rem;letter-spacing:0.3px">📅 v01-May-2026 14:10</div>
+    <div class="hstat" style="color:rgba(255,215,0,0.45);font-size:0.58rem;letter-spacing:0.3px">📅 v01-May-2026 14:52</div>
   </div>
 </div>
 
@@ -2253,29 +2253,44 @@ window.valuarJuguete = async (marcaHint = '') => {
         }));
 
       if (websites.length > 0) {
-        // Para cada link, construir thumbnail via favicon + screenshot API gratuita
-        const tarjetas = websites.map(l => {
-          const domain = (() => { try { return new URL(l.url).hostname; } catch(e) { return ''; } })();
-          // Usar Google Favicon (siempre disponible, gratis)
-          const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-          // Usar screenshot thumbnail via microlink.io (gratis, sin API key)
-          const thumb = `https://api.microlink.io/v1/favicon?url=${encodeURIComponent(l.url)}&size=large`;
-          // Screenshot via thum.io (gratuito)
-          const screenshot = `https://image.thum.io/get/width/120/crop/80/${encodeURIComponent(l.url)}`;
-          return `<a href="${l.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:10px;margin-bottom:8px;text-decoration:none;color:var(--text)">
-            <img src="${screenshot}" 
-              onerror="this.onerror=null;this.src='${favicon}';this.style.objectFit='contain';this.style.padding='8px';this.style.background='rgba(255,255,255,0.1)'"
-              style="width:72px;height:54px;object-fit:cover;border-radius:7px;flex-shrink:0;background:#222">
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:700;font-size:0.82rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${l.titulo}</div>
-              <div style="color:var(--teal);font-size:0.7rem;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${domain}</div>
-            </div>
-          </a>`;
-        }).join('');
-        linksHtml = `<br><br><div style="background:rgba(0,229,196,0.08);border:1px solid rgba(0,229,196,0.3);border-radius:12px;padding:14px">
-          <div style="color:var(--teal);font-weight:800;margin-bottom:10px">🌐 Encontrado en internet:</div>
-          ${tarjetas}
-        </div>`;
+        // Construir tarjetas con DOM seguro (evita problemas de comillas en template literals)
+        const wrapDiv = document.createElement('div');
+        wrapDiv.style.cssText = 'background:rgba(0,229,196,0.08);border:1px solid rgba(0,229,196,0.3);border-radius:12px;padding:14px;margin-top:16px';
+        const titulo = document.createElement('div');
+        titulo.style.cssText = 'color:#00e5c4;font-weight:800;margin-bottom:10px';
+        titulo.textContent = '🌐 Encontrado en internet:';
+        wrapDiv.appendChild(titulo);
+
+        websites.forEach(l => {
+          const domain = (() => { try { return new URL(l.url).hostname; } catch(e2) { return l.sitio || ''; } })();
+          const favicon = 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=64';
+          const screenshot = 'https://image.thum.io/get/width/120/crop/80/' + encodeURIComponent(l.url);
+
+          const a = document.createElement('a');
+          a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+          a.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:10px;margin-bottom:8px;text-decoration:none;color:#fff';
+
+          const img = document.createElement('img');
+          img.src = screenshot;
+          img.style.cssText = 'width:72px;height:54px;object-fit:cover;border-radius:7px;flex-shrink:0;background:#222';
+          img.onerror = function() { this.onerror=null; this.src=favicon; this.style.objectFit='contain'; this.style.padding='10px'; this.style.background='rgba(255,255,255,0.1)'; };
+
+          const info = document.createElement('div');
+          info.style.cssText = 'flex:1;min-width:0';
+          const t = document.createElement('div');
+          t.style.cssText = 'font-weight:700;font-size:0.82rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden';
+          t.textContent = l.titulo;
+          const d = document.createElement('div');
+          d.style.cssText = 'color:#00e5c4;font-size:0.7rem;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+          d.textContent = domain;
+
+          info.appendChild(t); info.appendChild(d);
+          a.appendChild(img); a.appendChild(info);
+          wrapDiv.appendChild(a);
+        });
+
+        // Serializar a HTML string para linksHtml
+        linksHtml = '<br><br>' + wrapDiv.outerHTML;
       } else {
         // Fallback: link directo a Google
         const gQuery = encodeURIComponent(queryBusqueda);
