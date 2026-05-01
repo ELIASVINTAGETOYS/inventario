@@ -2165,7 +2165,7 @@ window.openValDetail = async (id) => {
     document.getElementById('val-detalle-texto').innerHTML = formatted;
     const fotoDiv = document.getElementById('val-detalle-foto');
     if (v.fotoUrl) {
-      fotoDiv.innerHTML = `<img src="${v.fotoUrl}" style="width:100%;height:100%;object-fit:cover">`;
+      fotoDiv.innerHTML = `<img src="${v.fotoUrl}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in" onclick="openLightbox('${v.fotoUrl}')">`;
     }
     document.getElementById('app-content').scrollTop = 0;
   } catch(e) { showToast('Error cargando valuación', true); }
