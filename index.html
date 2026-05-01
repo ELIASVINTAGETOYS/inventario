@@ -690,7 +690,8 @@ body::before {
   <div class="tab" onclick="showTab('top10')">🏆 Top 10</div>
   <div class="tab" onclick="showTab('estadisticas')">📊 Stats</div>
   <div class="tab" onclick="showTab('historial')">📅 Historial</div>
-  <div class="tab" onclick="showTab('agregar')" style="color:#ff3d6b;font-weight:900">➕ Agregar</div>
+  <div class="tab" onclick="showTab('valuar')" style="color:#00e5c4;font-weight:900">💎 Valuar</div>
+  <div class="tab" onclick="showTab('agregar')" style="color:#ff4444;font-weight:900">➕ Agregar</div>
 </div>
 
 <div class="app-content" id="app-content">
@@ -756,6 +757,35 @@ body::before {
 <div class="view" id="view-historial">
   <div class="section-title">📅 Historial de adquisiciones</div>
   <div id="hist-list"></div>
+</div>
+
+<!-- VALUAR -->
+<div class="view" id="view-valuar">
+  <div class="section-title">💎 Valuador de juguetes</div>
+  <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Sube una foto y la IA analizará el juguete con historia, precio estimado y rareza.</p>
+
+  <!-- Foto para valuar -->
+  <div class="photo-area" id="val-photo-area" style="height:100px;margin-bottom:12px">
+    <div id="val-placeholder" class="photo-btns">
+      <button class="photo-btn" onclick="openValCamera()">📷 Cámara</button>
+      <button class="photo-btn secondary" onclick="document.getElementById('val-gallery').click()">🖼️ Galería</button>
+    </div>
+    <img id="val-preview" class="photo-preview-img" style="display:none">
+    <button id="val-change" class="change-btn" style="display:none" onclick="resetValPhoto()">✏️ Cambiar</button>
+  </div>
+  <input type="file" accept="image/*" id="val-gallery" style="display:none" onchange="onValPhoto(this)">
+
+  <button class="btn btn-primary" id="val-btn" onclick="valuarJuguete()" disabled style="margin-bottom:16px">
+    💎 Analizar y valuar
+  </button>
+
+  <div id="val-result" class="ai-result" style="display:none"></div>
+
+  <!-- Historial de valuaciones -->
+  <div style="margin-top:20px">
+    <div class="section-title" style="font-size:0.95rem">📋 Historial de valuaciones</div>
+    <div id="val-historial"></div>
+  </div>
 </div>
 
 <!-- AGREGAR -->
@@ -1854,8 +1884,173 @@ window.shareWhatsApp = () => {
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
+// ─── VALUADOR ─────────────────────────────────────────────────────────
+let valPhoto = null;
+
+window.onValPhoto = (input) => {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => setValPhoto(e.target.result);
+  reader.readAsDataURL(file);
+};
+
+window.openValCamera = async () => {
+  // Reusar la cámara principal pero para valuación
+  valCameraMode = true;
+  openCamera();
+};
+
+function setValPhoto(dataUrl) {
+  valPhoto = dataUrl;
+  document.getElementById('val-preview').src = dataUrl;
+  document.getElementById('val-preview').style.display = 'block';
+  document.getElementById('val-placeholder').style.display = 'none';
+  document.getElementById('val-change').style.display = 'block';
+  document.getElementById('val-btn').disabled = false;
+};
+
+window.resetValPhoto = () => {
+  valPhoto = null;
+  document.getElementById('val-preview').style.display = 'none';
+  document.getElementById('val-placeholder').style.display = 'flex';
+  document.getElementById('val-change').style.display = 'none';
+  document.getElementById('val-btn').disabled = true;
+  document.getElementById('val-gallery').value = '';
+};
+
+window.valuarJuguete = async () => {
+  if (!valPhoto) return;
+  const btn = document.getElementById('val-btn');
+  const result = document.getElementById('val-result');
+  btn.innerHTML = '⏳ Analizando...';
+  btn.disabled = true;
+  result.style.display = 'block';
+  result.innerHTML = '<span style="color:var(--muted)">🔍 La IA está analizando el juguete...</span>';
+
+  try {
+    const mediaType = valPhoto.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+    const imageData = valPhoto.split(',')[1];
+    const prompt = `Eres un experto tasador de juguetes vintage de colección, especialmente juguetes japoneses de hojalata, battery toys, robots y juguetes de fricción de los años 1950-1980.
+
+Analiza esta imagen con todo detalle y proporciona:
+
+🤖 **IDENTIFICACIÓN**
+- Nombre completo del juguete
+- Fabricante/Marca
+- País de origen
+- Año aproximado de fabricación
+
+📖 **HISTORIA**
+- Breve historia del fabricante
+- Contexto histórico del juguete
+- Datos curiosos o interesantes
+
+💰 **VALUACIÓN**
+- Precio estimado en mal estado: $XXX USD
+- Precio estimado en buen estado: $XXX USD  
+- Precio estimado en estado mint/perfecto: $XXX USD
+- Precio promedio en eBay actualmente: $XXX USD
+
+🏆 **RAREZA Y COLECCIONABILIDAD**
+- Nivel de rareza: (Común / Poco común / Raro / Muy raro / Extremadamente raro)
+- Demanda entre coleccionistas
+- Qué hace especial a este juguete
+
+🔍 **AUTENTICIDAD**
+- Cómo identificar si es original
+- Señales de falsificación a buscar
+- Detalles importantes del original
+
+📈 **TENDENCIA DE MERCADO**
+- ¿El valor está subiendo o bajando?
+- Recomendación: ¿vale la pena conservar o vender?`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${window.GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { inline_data: { mime_type: mediaType, data: imageData } },
+          { text: prompt }
+        ]}]
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) {
+      result.innerHTML = '❌ Error: ' + data.error.message;
+      btn.innerHTML = '💎 Analizar y valuar'; btn.disabled = false; return;
+    }
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No se pudo analizar';
+    const formatted = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g,'<br>');
+    result.innerHTML = formatted;
+
+    // Guardar en Firebase
+    const valuacion = {
+      userId: currentUser.uid,
+      fecha: new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'}),
+      fechaISO: new Date().toISOString(),
+      fotoUrl: valPhoto,
+      analisis: text
+    };
+    await addDoc(collection(db, 'valuaciones'), valuacion);
+    showToast('✅ Valuación guardada');
+    loadValHistorial();
+
+  } catch(e) {
+    result.innerHTML = '❌ Error: ' + e.message;
+  }
+  btn.innerHTML = '💎 Analizar y valuar';
+  btn.disabled = false;
+};
+
+async function loadValHistorial() {
+  const el = document.getElementById('val-historial');
+  try {
+    const q = query(collection(db, 'valuaciones'), orderBy('fechaISO','desc'));
+    const snap = await getDocs(q);
+    const vals = snap.docs.filter(d => d.data().userId === currentUser.uid).slice(0, 20);
+    if (!vals.length) {
+      el.innerHTML = '<div class="empty" style="padding:20px"><div class="emoji">💎</div><p>Aún no tienes valuaciones guardadas</p></div>';
+      return;
+    }
+    el.innerHTML = vals.map(d => {
+      const v = d.data();
+      const preview = v.analisis.substring(0, 120).replace(/\*\*/g,'') + '...';
+      return `<div class="hist-item" onclick="openValDetail('${d.id}')" style="align-items:flex-start">
+        <div class="hist-img">${v.fotoUrl ? `<img src="${v.fotoUrl}" loading="lazy">` : '💎'}</div>
+        <div class="hist-info" style="flex:1">
+          <div class="hist-name" style="font-size:0.8rem">${preview}</div>
+          <div class="hist-date">📅 ${v.fecha}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:0.82rem">Error cargando historial</p>';
+  }
+}
+
+window.openValDetail = async (id) => {
+  try {
+    const snap = await getDoc(doc(db, 'valuaciones', id));
+    if (!snap.exists()) return;
+    const v = snap.data();
+    const formatted = v.analisis.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g,'<br>');
+    document.getElementById('val-result').innerHTML = formatted;
+    document.getElementById('val-result').style.display = 'block';
+    if (v.fotoUrl) {
+      document.getElementById('val-preview').src = v.fotoUrl;
+      document.getElementById('val-preview').style.display = 'block';
+      document.getElementById('val-placeholder').style.display = 'none';
+    }
+    document.getElementById('app-content').scrollTop = 0;
+  } catch(e) {}
+};
+
 // ─── NAV ──────────────────────────────────────────────────────────────
-const navMap = { coleccion:'nb-coleccion', top10:'nb-top10', estadisticas:'nb-estadisticas', historial:'nb-historial', agregar:'nb-agregar' };
+const navMap = { coleccion:'nb-coleccion', top10:'nb-top10', estadisticas:'nb-estadisticas', historial:'nb-historial', valuar:'nb-valuar', agregar:'nb-agregar' };
 
 window.switchNav = (section) => {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -1869,9 +2064,10 @@ window.showTab = (tab) => {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   const v = document.getElementById('view-'+tab);
   if (v) v.classList.add('active');
-  const tabMap = {coleccion:0,top10:1,estadisticas:2,historial:3,agregar:4};
+  const tabMap = {coleccion:0,top10:1,estadisticas:2,historial:3,valuar:4,agregar:5};
   const tabEls = document.querySelectorAll('.tab');
   if (tabMap[tab] !== undefined) tabEls[tabMap[tab]]?.classList.add('active');
+  if (tab === 'valuar') loadValHistorial();
 };
 
 // ─── LIGHTBOX ─────────────────────────────────────────────────────────
