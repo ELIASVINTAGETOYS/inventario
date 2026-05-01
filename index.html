@@ -184,7 +184,21 @@ body {
   cursor: pointer; font-family: 'Nunito', sans-serif;
 }
 
-.form-group { display: flex; flex-direction: column; gap: 5px; }
+.video-area {
+  width: 100%; background: #080815;
+  border: 3px dashed var(--border); border-radius: 18px;
+  overflow: hidden; position: relative; transition: border-color 0.2s;
+  min-height: 80px;
+}
+.video-area:hover { border-color: var(--teal); }
+.video-placeholder { display: flex; gap: 10px; padding: 20px; }
+.video-preview { width: 100%; max-height: 220px; display: none; border-radius: 14px; object-fit: cover; background: #000; }
+.video-change-btn {
+  position: absolute; bottom: 10px; right: 10px;
+  background: rgba(0,0,0,0.7); border: none; border-radius: 10px;
+  color: white; padding: 6px 12px; font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; font-family: 'Nunito', sans-serif; display: none;
+}
 .form-group label { font-size: 0.72rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .form-group input, .form-group textarea, .form-group select {
   background: var(--card); border: 2px solid var(--border);
@@ -466,6 +480,20 @@ body {
     </div>
     <input type="file" accept="image/*" id="photo-gallery" style="display:none" onchange="onPhoto(this)">
 
+    <!-- VIDEO -->
+    <div class="form-group">
+      <label>🎬 Video del juguete (opcional)</label>
+    </div>
+    <div class="video-area" id="video-area">
+      <div id="video-placeholder" class="video-placeholder">
+        <button class="photo-btn" onclick="document.getElementById('video-gallery').click()">🎥 Subir video</button>
+        <button class="photo-btn secondary" onclick="recordVideo()">⏺️ Grabar</button>
+      </div>
+      <video id="vid-preview" class="video-preview" controls playsinline></video>
+      <button id="vid-change" class="video-change-btn" onclick="resetVideo()">✏️ Cambiar video</button>
+    </div>
+    <input type="file" accept="video/*" id="video-gallery" style="display:none" onchange="onVideo(this)">
+
     <button class="btn btn-primary" id="save-btn" onclick="saveToy()" style="margin-bottom:8px">✅ Guardar en la nube</button>
     <button class="ai-btn" id="ai-btn" onclick="identifyWithAI()" disabled>🤖 Identificar con IA</button>
     <div class="ai-result" id="ai-result"></div>
@@ -651,6 +679,7 @@ let toys = [];
 let currentId = null;
 let editingId = null;
 let currentPhoto = null;
+let currentVideo = null;
 let currentAiDesc = '';
 let camStream = null;
 let facingMode = 'environment';
@@ -1042,6 +1071,39 @@ window.resetPhoto = () => {
   document.getElementById('ai-btn').disabled = true;
 };
 
+// ─── VIDEO ────────────────────────────────────────────────────────────
+window.onVideo = (input) => {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 50 * 1024 * 1024) { showToast('⚠️ Video muy grande (máx 50MB)'); return; }
+  const url = URL.createObjectURL(file);
+  const vid = document.getElementById('vid-preview');
+  vid.src = url;
+  vid.style.display = 'block';
+  document.getElementById('video-placeholder').style.display = 'none';
+  document.getElementById('vid-change').style.display = 'block';
+  const reader = new FileReader();
+  reader.onload = e => { currentVideo = e.target.result; };
+  reader.readAsDataURL(file);
+  showToast('✅ Video cargado');
+};
+
+window.recordVideo = () => {
+  const input = document.getElementById('video-gallery');
+  input.setAttribute('capture', 'environment');
+  input.click();
+};
+
+window.resetVideo = () => {
+  currentVideo = null;
+  const vid = document.getElementById('vid-preview');
+  vid.src = '';
+  vid.style.display = 'none';
+  document.getElementById('video-placeholder').style.display = 'flex';
+  document.getElementById('vid-change').style.display = 'none';
+  document.getElementById('video-gallery').value = '';
+};
+
 // ─── CÁMARA ───────────────────────────────────────────────────────────
 window.openCamera = async () => {
   const modal = document.getElementById('camera-modal');
@@ -1159,6 +1221,14 @@ window.editToy = () => {
   document.getElementById('f-compra').value = t.compra || '';
   document.getElementById('f-notas').value = t.notas || '';
   currentAiDesc = t.aiDesc || '';
+  if (t.videoUrl) {
+    currentVideo = t.videoUrl;
+    const vid = document.getElementById('vid-preview');
+    vid.src = t.videoUrl;
+    vid.style.display = 'block';
+    document.getElementById('video-placeholder').style.display = 'none';
+    document.getElementById('vid-change').style.display = 'block';
+  }
   if (t.aiDesc) {
     const result = document.getElementById('ai-result');
     result.innerHTML = '<b style="color:var(--blue)">🤖 IA (guardada):</b><br><br>' + t.aiDesc.replace(/\n/g,'<br>');
@@ -1235,6 +1305,7 @@ window.saveToy = async () => {
         : document.getElementById('f-cat').value,
       notas: document.getElementById('f-notas').value.trim(),
       aiDesc: currentAiDesc || '',
+      videoUrl: currentVideo || '',
       fotoUrl,
       userId: currentUser.uid,
       userName: currentUser.displayName || 'Usuario',
@@ -1263,6 +1334,7 @@ window.clearForm = () => {
   ['f-nombre','f-marca','f-anio','f-compra','f-notas'].forEach(id => document.getElementById(id).value = '');
   ['f-origen','f-estado','f-caja','f-cat'].forEach(id => document.getElementById(id).selectedIndex = 0);
   resetPhoto();
+  resetVideo();
   currentAiDesc = '';
   document.getElementById('ai-result').classList.remove('show');
   editingId = null;
@@ -1314,7 +1386,11 @@ window.openDetail = (id) => {
     </div>`;
   }
   if (t.notas) sections += `<div class="info-card"><h4>📖 Historia / Descripción IA</h4><p style="font-size:0.88rem;line-height:1.6">${t.notas}</p></div>`;
-  if (t.aiDesc) sections += `<div class="info-card"><h4>🤖 IA</h4><p style="font-size:0.88rem;line-height:1.6;color:var(--muted)">${t.aiDesc.replace(/\n/g,'<br>')}</p></div>`;
+  if (t.aiDesc) {
+    const formatted = t.aiDesc.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g,'<br>');
+    sections += `<div class="info-card"><h4>🤖 IA</h4><p style="font-size:0.88rem;line-height:1.8;color:#ffffff">${formatted}</p></div>`;
+  }
+  if (t.videoUrl) sections += `<div class="info-card"><h4>🎬 Video</h4><video src="${t.videoUrl}" controls playsinline style="width:100%;border-radius:10px;max-height:260px;background:#000"></video></div>`;
   document.getElementById('d-sections').innerHTML = sections;
   document.getElementById('detail-overlay').classList.add('open');
 };
