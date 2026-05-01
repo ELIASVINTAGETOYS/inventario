@@ -864,12 +864,14 @@ body::before {
     <div class="form-row">
       <div class="form-group">
         <label>🌍 Origen</label>
-        <select id="f-origen">
+        <select id="f-origen" onchange="toggleOrigenInput(this)">
           <option value="">País...</option>
           <option>Japón</option><option>Estados Unidos</option>
-          <option>Alemania</option><option>Francia</option>
+          <option>Alemania</option><option>Francia</option><option>España</option>
+          <option>Italia</option><option>Reino Unido</option>
           <option>México</option><option>China</option><option>Otro</option>
         </select>
+        <input type="text" id="f-origen-otro" placeholder="✏️ Escribe el país..." style="display:none;margin-top:6px;width:100%;padding:10px 12px;background:var(--card2);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:0.9rem;-webkit-user-select:text;user-select:text">
       </div>
       <div class="form-group">
         <label>⭐ Estado</label>
@@ -1114,6 +1116,12 @@ function updateHeader() {
 
 // ─── FILTROS CATEGORÍA ────────────────────────────────────────────────
 let activeCat = '';
+
+window.toggleOrigenInput = (sel) => {
+  const inp = document.getElementById('f-origen-otro');
+  inp.style.display = sel.value === 'Otro' ? 'block' : 'none';
+  if (sel.value !== 'Otro') inp.value = '';
+};
 
 window.onCatChange = () => {
   const val = document.getElementById('f-cat').value;
@@ -1717,6 +1725,14 @@ window.editToy = () => {
   }
   const setSelect = (id, val) => { const el = document.getElementById(id); for(let o of el.options) if(o.value===val||o.text===val){o.selected=true;break;} };
   setSelect('f-origen', t.origen);
+  // Si el origen no está en la lista, usar "Otro" + campo de texto
+  const origenSelect = document.getElementById('f-origen');
+  const origenOpts = [...origenSelect.options].map(o => o.value);
+  if (t.origen && !origenOpts.includes(t.origen)) {
+    setSelect('f-origen', 'Otro');
+    document.getElementById('f-origen-otro').value = t.origen;
+    document.getElementById('f-origen-otro').style.display = 'block';
+  }
   setSelect('f-estado', t.estado);
   setSelect('f-caja', t.caja);
   const predefinedCats = ['🤖 Robot','🐒 Animal','🎪 Payaso','🚗 Vehículo','👧 Muñeca','🎷 Músico','Otro'];
@@ -1778,7 +1794,9 @@ window.saveToy = async () => {
       anio: document.getElementById('f-anio').value.trim(),
       compra: document.getElementById('f-compra').value,
       valor: document.getElementById('f-compra').value,
-      origen: document.getElementById('f-origen').value,
+      origen: document.getElementById('f-origen').value === 'Otro'
+        ? document.getElementById('f-origen-otro').value.trim() || 'Otro'
+        : document.getElementById('f-origen').value,
       estado: document.getElementById('f-estado').value,
       caja: document.getElementById('f-caja').value,
       cat: document.getElementById('f-cat').value === 'Otro' 
@@ -1836,6 +1854,8 @@ window.clearForm = () => {
   editingId = null;
   document.getElementById('f-cat-nueva').style.display = 'none';
   document.getElementById('f-cat-nueva').value = '';
+  document.getElementById('f-origen-otro').style.display = 'none';
+  document.getElementById('f-origen-otro').value = '';
   document.getElementById('section-title-agregar').textContent = '✨ Agregar juguete';
   document.getElementById('save-btn').textContent = '✅ Guardar en la nube';
 };
