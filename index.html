@@ -1937,6 +1937,16 @@ window.showValPanel = (panel) => {
   if (panel === 'historial') loadValHistorial();
 };
 
+window.eliminarValuacion = async (id) => {
+  if (!confirm('¿Eliminar esta valuación?')) return;
+  try {
+    await deleteDoc(doc(db, 'valuaciones', id));
+    try { await deleteDoc(doc(db, 'valuaciones_texto', id)); } catch(e) {}
+    showToast('🗑️ Valuación eliminada');
+    loadValHistorial();
+  } catch(e) { showToast('Error al eliminar', true); }
+};
+
 window.backToHistorial = () => {
   showValPanel('historial');
 };
@@ -2020,38 +2030,41 @@ window.valuarJuguete = async () => {
     const imageData = valPhoto.split(',')[1];
     const prompt = `Eres un experto tasador de juguetes vintage de colección, especialmente juguetes japoneses de hojalata, battery toys, robots y juguetes de fricción de los años 1950-1980.
 
-Analiza esta imagen con todo detalle y proporciona:
+INSTRUCCIONES IMPORTANTES:
+- Si NO puedes identificar con certeza un dato, escribe "No determinado" o "Posiblemente [dato]"
+- NUNCA inventes marcas, fechas o precios si no estás seguro
+- Indica tu nivel de confianza: (Alta confianza / Confianza media / Baja confianza)
+- Los precios deben ser rangos realistas basados en mercado real de coleccionistas
+- Si la imagen no es clara o el juguete no es identificable, dilo honestamente
 
-🤖 **IDENTIFICACIÓN**
-- Nombre completo del juguete
-- Fabricante/Marca
-- País de origen
-- Año aproximado de fabricación
+Analiza la imagen y responde:
+
+🤖 **IDENTIFICACIÓN** (nivel de confianza: ___)
+- Nombre del juguete: 
+- Fabricante/Marca: 
+- País de origen: 
+- Año aproximado: 
 
 📖 **HISTORIA**
-- Breve historia del fabricante
-- Contexto histórico del juguete
-- Datos curiosos o interesantes
+(Solo incluye información que sepas con certeza. Si no tienes datos confiables, escríbelo)
 
-💰 **VALUACIÓN**
-- Precio estimado en mal estado: $XXX USD
-- Precio estimado en buen estado: $XXX USD  
-- Precio estimado en estado mint/perfecto: $XXX USD
-- Precio promedio en eBay actualmente: $XXX USD
+💰 **VALUACIÓN ESTIMADA**
+(Rangos aproximados, pueden variar según condición real y mercado actual)
+- Estado pobre: $__ - $__ USD
+- Estado bueno: $__ - $__ USD
+- Estado mint: $__ - $__ USD
 
-🏆 **RAREZA Y COLECCIONABILIDAD**
-- Nivel de rareza: (Común / Poco común / Raro / Muy raro / Extremadamente raro)
-- Demanda entre coleccionistas
-- Qué hace especial a este juguete
+⚠️ Nota: Los precios son estimados. Verifica en eBay o foros de coleccionistas para valores actuales.
+
+🏆 **RAREZA**
+- Nivel: 
+- Por qué:
 
 🔍 **AUTENTICIDAD**
-- Cómo identificar si es original
-- Señales de falsificación a buscar
-- Detalles importantes del original
+(Solo si tienes información confiable sobre este modelo específico)
 
-📈 **TENDENCIA DE MERCADO**
-- ¿El valor está subiendo o bajando?
-- Recomendación: ¿vale la pena conservar o vender?`;
+📈 **TENDENCIA**
+(Solo si tienes datos reales del mercado)`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${window.GEMINI_API_KEY}`, {
       method: 'POST',
@@ -2122,13 +2135,16 @@ async function loadValHistorial() {
     el.innerHTML = vals.map(d => {
       const v = d.data();
       const preview = (v.analisisPreview || v.analisis || '').substring(0, 100).replace(/\*\*/g,'') + '...';
-      return `<div class="hist-item" onclick="openValDetail('${d.id}')">
-        <div class="hist-img">${v.fotoUrl ? `<img src="${v.fotoUrl}" loading="lazy">` : '💎'}</div>
-        <div class="hist-info" style="flex:1">
-          <div class="hist-name" style="font-size:0.78rem;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${preview}</div>
-          <div class="hist-date">📅 ${v.fecha}</div>
+      return `<div class="hist-item" style="position:relative">
+        <div style="flex:1;display:flex;gap:12px;align-items:center" onclick="openValDetail('${d.id}')">
+          <div class="hist-img">${v.fotoUrl ? `<img src="${v.fotoUrl}" loading="lazy">` : '💎'}</div>
+          <div class="hist-info" style="flex:1">
+            <div class="hist-name" style="font-size:0.78rem;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${preview}</div>
+            <div class="hist-date">📅 ${v.fecha}</div>
+          </div>
+          <div style="color:var(--muted);font-size:1.2rem">›</div>
         </div>
-        <div style="color:var(--muted);font-size:1.2rem">›</div>
+        <button onclick="eliminarValuacion('${d.id}')" style="background:rgba(255,68,68,0.12);border:1px solid rgba(255,68,68,0.3);color:var(--accent);border-radius:10px;padding:6px 10px;font-size:0.85rem;cursor:pointer;margin-left:8px;flex-shrink:0">🗑️</button>
       </div>`;
     }).join('');
   } catch(e) {
