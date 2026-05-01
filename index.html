@@ -597,6 +597,10 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 // Sin storage - fotos como base64 en Firestore
 
+// ─── API KEY ANTHROPIC ────────────────────────────────────────────────
+// Pon aquí tu API key de Anthropic: https://console.anthropic.com
+window.ANTHROPIC_API_KEY = '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';
+
 let currentUser = null;
 let toys = [];
 let currentId = null;
@@ -881,6 +885,12 @@ window.closeCamera = () => {
 // ─── IA ───────────────────────────────────────────────────────────────
 window.identifyWithAI = async () => {
   if (!currentPhoto) return;
+  if (!window.ANTHROPIC_API_KEY || window.ANTHROPIC_API_KEY === 'TU_API_KEY_AQUI') {
+    const result = document.getElementById('ai-result');
+    result.innerHTML = '⚠️ Falta la API key de Anthropic. Edita el archivo y reemplaza <b>TU_API_KEY_AQUI</b> con tu key de <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue)">console.anthropic.com</a>';
+    result.classList.add('show');
+    return;
+  }
   const btn = document.getElementById('ai-btn');
   const result = document.getElementById('ai-result');
   btn.innerHTML = '<div class="loading"></div> Identificando...';
@@ -890,6 +900,8 @@ window.identifyWithAI = async () => {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
+        'x-api-key': window.ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
@@ -914,7 +926,7 @@ window.identifyWithAI = async () => {
         document.getElementById('f-anio').value = line.split(':')[1]?.trim()||'';
     });
   } catch(e) {
-    result.innerHTML = '⚠️ Error con IA. Llena manualmente.';
+    result.innerHTML = '⚠️ Error con IA: ' + (e.message || 'Verifica tu API key en el código');
     result.classList.add('show');
   }
   btn.innerHTML = '🤖 Identificar con IA';
