@@ -605,6 +605,7 @@ let toys = [];
 let currentId = null;
 let editingId = null;
 let currentPhoto = null;
+let currentAiDesc = '';
 let camStream = null;
 let facingMode = 'environment';
 let unsubscribe = null;
@@ -923,6 +924,7 @@ window.identifyWithAI = async () => {
       btn.innerHTML = '🤖 Identificar con IA'; btn.disabled = false; return;
     }
     const text = data.content?.[0]?.text || 'No identificado';
+    currentAiDesc = text;
     result.innerHTML = '<b style="color:var(--blue)">🤖 IA:</b><br><br>' + text.replace(/\n/g,'<br>');
     result.classList.add('show');
     const lines = text.split('\n');
@@ -955,6 +957,7 @@ window.editToy = () => {
   document.getElementById('f-anio').value = t.anio || '';
   document.getElementById('f-compra').value = t.compra || '';
   document.getElementById('f-notas').value = t.notas || '';
+  currentAiDesc = t.aiDesc || '';
   const setSelect = (id, val) => { const el = document.getElementById(id); for(let o of el.options) if(o.value===val||o.text===val){o.selected=true;break;} };
   setSelect('f-origen', t.origen);
   setSelect('f-estado', t.estado);
@@ -1026,6 +1029,7 @@ window.saveToy = async () => {
         ? document.getElementById('f-cat-nueva').value.trim() || 'Otro'
         : document.getElementById('f-cat').value,
       notas: document.getElementById('f-notas').value.trim(),
+      aiDesc: currentAiDesc || '',
       fotoUrl,
       userId: currentUser.uid,
       userName: currentUser.displayName || 'Usuario',
@@ -1054,6 +1058,7 @@ window.clearForm = () => {
   ['f-nombre','f-marca','f-anio','f-compra','f-notas'].forEach(id => document.getElementById(id).value = '');
   ['f-origen','f-estado','f-caja','f-cat'].forEach(id => document.getElementById(id).selectedIndex = 0);
   resetPhoto();
+  currentAiDesc = '';
   document.getElementById('ai-result').classList.remove('show');
   editingId = null;
   document.getElementById('f-cat-nueva').style.display = 'none';
@@ -1104,6 +1109,7 @@ window.openDetail = (id) => {
     </div>`;
   }
   if (t.notas) sections += `<div class="info-card"><h4>📖 Historia / Descripción IA</h4><p style="font-size:0.88rem;line-height:1.6">${t.notas}</p></div>`;
+  if (t.aiDesc) sections += `<div class="info-card"><h4>🤖 IA</h4><p style="font-size:0.88rem;line-height:1.6;color:var(--muted)">${t.aiDesc.replace(/\n/g,'<br>')}</p></div>`;
   document.getElementById('d-sections').innerHTML = sections;
   document.getElementById('detail-overlay').classList.add('open');
 };
