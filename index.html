@@ -15,16 +15,7 @@
 <!-- VERSIÓN: actualiza este número cada vez que subas cambios -->
 <script>
 const APP_VERSION = '20260501-006';
-const STORED_VERSION = localStorage.getItem('app_version');
-if (STORED_VERSION !== APP_VERSION) {
-  localStorage.setItem('app_version', APP_VERSION);
-  if (STORED_VERSION) {
-    if ('caches' in window) {
-      caches.keys().then(names => names.forEach(n => caches.delete(n)));
-    }
-    window.location.reload(true);
-  }
-}
+localStorage.setItem('app_version', APP_VERSION);
 // Registrar Service Worker para PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
