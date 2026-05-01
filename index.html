@@ -681,7 +681,7 @@ body::before {
     <div class="hstat">🧸 <b id="h-count">0</b> pzas</div>
     <div class="hstat">💰 <b id="h-usd">$0</b> Invertido</div>
     <div class="hstat">👤 <b id="h-user">—</b></div>
-    <div class="hstat" style="color:rgba(255,215,0,0.45);font-size:0.58rem;letter-spacing:0.3px">📅 v01-May-2026 10:59</div>
+    <div class="hstat" style="color:rgba(255,215,0,0.45);font-size:0.58rem;letter-spacing:0.3px">📅 v01-May-2026 14:10</div>
   </div>
 </div>
 
@@ -788,10 +788,31 @@ body::before {
       <button id="val-change" class="change-btn" style="display:none" onclick="resetValPhoto()">✏️ Cambiar</button>
     </div>
     <input type="file" accept="image/*" id="val-gallery" style="display:none" onchange="onValPhoto(this)">
-    <button class="btn btn-primary" id="val-btn" onclick="valuarJuguete()" disabled style="margin-bottom:16px">
+    <button class="btn btn-primary" id="val-btn" onclick="abrirModalMarca()" disabled style="margin-bottom:16px">
       💎 Analizar y valuar
     </button>
     <div id="val-result" class="ai-result" style="display:none"></div>
+
+    <!-- Modal marca para valuacion -->
+    <div id="val-marca-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center">
+      <div style="background:#1a1a2e;border:1px solid rgba(255,215,0,0.3);border-radius:18px;padding:24px;margin:20px;max-width:360px;width:100%">
+        <div style="font-size:1.3rem;font-weight:800;color:var(--gold);margin-bottom:6px">🏷️ Marca del juguete</div>
+        <div style="color:var(--muted);font-size:0.82rem;margin-bottom:16px">Opcional - ayuda a la IA a identificarlo mejor</div>
+        <input id="val-marca-input" type="text" placeholder="Ej: Yonezawa, J. Chein, Nomura..." 
+          style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,215,0,0.4);background:rgba(255,255,255,0.06);color:#fff;font-size:0.95rem;box-sizing:border-box;margin-bottom:16px"
+          onkeydown="if(event.key==='Enter')confirmarValuacion()">
+        <div style="display:flex;gap:10px">
+          <button onclick="document.getElementById('val-marca-modal').style.display='none'" 
+            style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#aaa;font-size:0.9rem;cursor:pointer">
+            Cancelar
+          </button>
+          <button onclick="confirmarValuacion()" 
+            style="flex:2;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#e63946,#c1121f);color:#fff;font-size:0.95rem;font-weight:800;cursor:pointer">
+            💎 Valuar ahora
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- PANEL: HISTORIAL -->
@@ -2127,7 +2148,19 @@ window.resetValPhoto = () => {
   document.getElementById('val-gallery').value = '';
 };
 
-window.valuarJuguete = async () => {
+window.abrirModalMarca = () => {
+  const modal = document.getElementById('val-marca-modal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('val-marca-input').focus(), 100);
+};
+
+window.confirmarValuacion = () => {
+  document.getElementById('val-marca-modal').style.display = 'none';
+  const marca = document.getElementById('val-marca-input').value.trim();
+  valuarJuguete(marca);
+};
+
+window.valuarJuguete = async (marcaHint = '') => {
   if (!valPhoto) return;
   const btn = document.getElementById('val-btn');
   const result = document.getElementById('val-result');
@@ -2148,7 +2181,7 @@ window.valuarJuguete = async () => {
         generationConfig: { temperature: 0.4, topP: 0.9 },
         contents: [{ parts: [
           { inline_data: { mime_type: mediaType, data: imageData } },
-          { text: PROMPT_EXPERTO }
+          { text: PROMPT_EXPERTO + (marcaHint ? '\n\nINFORMACION ADICIONAL DEL COLECCIONISTA: La marca/fabricante de este juguete es "' + marcaHint + '". Usa esta informacion como dato confirmado en tu analisis.' : '') }
         ]}]
       })
     });
@@ -2166,61 +2199,90 @@ window.valuarJuguete = async () => {
     // PASO 2: Extraer nombre del juguete para búsqueda web
     result.innerHTML += '<br><br><span style="color:var(--muted)">🌐 Paso 2/2: Buscando en internet...</span>';
 
-    // Extraer nombre y marca del análisis
+    // Extraer nombre y marca del análisis para búsqueda
     let nombreBusqueda = '';
+    let marcaBusqueda = '';
     const lines = text.split('\n');
     lines.forEach(line => {
       const clean = line.replace(/\*\*/g,'').replace(/\*/g,'').trim();
       if (clean.includes('Nombre del juguete:') && !nombreBusqueda) {
         nombreBusqueda = clean.split('Nombre del juguete:')[1]?.trim() || '';
+        // Limpiar paréntesis
+        nombreBusqueda = nombreBusqueda.split('(')[0].trim();
       }
-      if (clean.includes('Fabricante/Marca:') && nombreBusqueda && !nombreBusqueda.includes(' ')) {
-        const marca = clean.split('Fabricante/Marca:')[1]?.trim() || '';
-        if (marca && !marca.toLowerCase().includes('no determinado')) {
-          nombreBusqueda += ' ' + marca;
-        }
+      if (clean.includes('Fabricante/Marca:') && !marcaBusqueda) {
+        marcaBusqueda = clean.split('Fabricante/Marca:')[1]?.trim() || '';
+        marcaBusqueda = marcaBusqueda.split('(')[0].trim();
       }
     });
 
-    if (!nombreBusqueda || nombreBusqueda.toLowerCase().includes('no determinado')) {
-      nombreBusqueda = 'vintage tin toy robot Japan collectible';
+    // Si el usuario escribio la marca, tiene prioridad
+    if (marcaHint) marcaBusqueda = marcaHint;
+    let queryBusqueda = '';
+    if (marcaBusqueda && !marcaBusqueda.toLowerCase().includes('no determinado')) {
+      queryBusqueda = marcaBusqueda + ' ' + nombreBusqueda;
+    } else {
+      queryBusqueda = nombreBusqueda || 'vintage tin toy collectible';
     }
-    nombreBusqueda += ' vintage toy collectible';
+    queryBusqueda = (queryBusqueda + ' vintage tin toy for sale').trim();
 
-    // Búsqueda web via Gemini con grounding
-    const searchResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${window.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        generationConfig: { temperature: 0.1 },
-        tools: [{ google_search: {} }],
-        contents: [{ parts: [{ text: `Busca en internet: "${nombreBusqueda}". Dame exactamente 3-5 links reales de sitios donde se vende o aparece este juguete (eBay, Etsy, Heritage Auctions, coleccionistas, museos). Responde SOLO con este formato JSON sin texto extra:
-{"links":[{"titulo":"título de la página","url":"url completa","sitio":"nombre del sitio"}]}` }]}]
-      })
-    });
-
-    const searchData = await searchResponse.json();
-    const searchText = searchData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
+    // Búsqueda web via Gemini con grounding (usa groundingChunks)
     let linksHtml = '';
     try {
-      const clean = searchText.replace(/```json|```/g,'').trim();
-      const parsed = JSON.parse(clean);
-      if (parsed.links && parsed.links.length > 0) {
+      const searchResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${window.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          generationConfig: { temperature: 0.1 },
+          tools: [{ google_search: {} }],
+          contents: [{ parts: [{ text: `Search the web for: "${queryBusqueda}". Find pages on eBay, Etsy, Heritage Auctions, WorthPoint, Pinterest, or collector sites where this exact toy is sold or displayed. List 5 results.` }]}]
+        })
+      });
+
+      const searchData = await searchResponse.json();
+
+      // Extraer grounding chunks (URLs reales que Gemini consultó)
+      const chunks = searchData.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const websites = chunks
+        .filter(c => c.web && c.web.uri)
+        .slice(0, 5)
+        .map(c => ({
+          titulo: c.web.title || 'Ver página',
+          url: c.web.uri,
+          sitio: (c.web.title || '').split(' - ').pop() || 'Web'
+        }));
+
+      if (websites.length > 0) {
         linksHtml = `<br><br><div style="background:rgba(0,229,196,0.08);border:1px solid rgba(0,229,196,0.3);border-radius:12px;padding:14px">
           <div style="color:var(--teal);font-weight:800;margin-bottom:10px">🌐 Encontrado en internet:</div>
-          ${parsed.links.map(l => `
-            <a href="${l.url}" target="_blank" style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px;text-decoration:none;color:var(--text)">
-              <span style="font-size:1.2rem">🔗</span>
-              <div>
-                <div style="font-weight:700;font-size:0.82rem">${l.titulo}</div>
-                <div style="color:var(--muted);font-size:0.72rem">${l.sitio}</div>
+          ${websites.map(l => `
+            <a href="${l.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px;text-decoration:none;color:var(--text)">
+              <span style="font-size:1.3rem">🔗</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.titulo}</div>
+                <div style="color:var(--teal);font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.sitio}</div>
               </div>
             </a>`).join('')}
         </div>`;
+      } else {
+        // Fallback: link directo a Google
+        const gQuery = encodeURIComponent(queryBusqueda);
+        linksHtml = `<br><br><div style="background:rgba(0,229,196,0.08);border:1px solid rgba(0,229,196,0.3);border-radius:12px;padding:14px">
+          <div style="color:var(--teal);font-weight:800;margin-bottom:10px">🌐 Buscar en internet:</div>
+          <a href="https://www.google.com/search?q=${gQuery}&tbm=shop" target="_blank" rel="noopener" style="display:block;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px;text-decoration:none;color:var(--text);font-weight:700;font-size:0.85rem">🛒 Buscar "${queryBusqueda}" en Google Shopping</a>
+          <a href="https://www.ebay.com/sch/i.html?_nkw=${gQuery}" target="_blank" rel="noopener" style="display:block;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px;text-decoration:none;color:var(--text);font-weight:700;font-size:0.85rem">💰 Buscar en eBay</a>
+          <a href="https://www.worthpoint.com/search?q=${gQuery}" target="_blank" rel="noopener" style="display:block;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;text-decoration:none;color:var(--text);font-weight:700;font-size:0.85rem">📊 Buscar en WorthPoint</a>
+        </div>`;
       }
-    } catch(e) {
-      // Si no pudo parsear links, no mostrar sección
+    } catch(searchErr) {
+      console.error('Error búsqueda web:', searchErr);
+      // Fallback en caso de error
+      const gQuery = encodeURIComponent(queryBusqueda);
+      linksHtml = `<br><br><div style="background:rgba(0,229,196,0.08);border:1px solid rgba(0,229,196,0.3);border-radius:12px;padding:14px">
+        <div style="color:var(--teal);font-weight:800;margin-bottom:10px">🌐 Buscar en internet:</div>
+        <a href="https://www.google.com/search?q=${gQuery}" target="_blank" rel="noopener" style="display:block;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px;text-decoration:none;color:var(--text);font-weight:700;font-size:0.85rem">🔍 Buscar en Google</a>
+        <a href="https://www.ebay.com/sch/i.html?_nkw=${gQuery}" target="_blank" rel="noopener" style="display:block;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;text-decoration:none;color:var(--text);font-weight:700;font-size:0.85rem">💰 Buscar en eBay</a>
+      </div>`;
     }
 
     result.innerHTML = formatted + linksHtml;
