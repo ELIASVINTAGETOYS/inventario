@@ -6,20 +6,31 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff4444">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BatteryToys">
 <title>🤖 Battery Vintage Toys — Inventario</title>
 <!-- VERSIÓN: actualiza este número cada vez que subas cambios -->
 <script>
-const APP_VERSION = '20260501-003';
+const APP_VERSION = '20260501-004';
 const STORED_VERSION = localStorage.getItem('app_version');
 if (STORED_VERSION !== APP_VERSION) {
   localStorage.setItem('app_version', APP_VERSION);
   if (STORED_VERSION) {
-    // Limpiar caché y recargar
     if ('caches' in window) {
       caches.keys().then(names => names.forEach(n => caches.delete(n)));
     }
     window.location.reload(true);
   }
+}
+// Registrar Service Worker para PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/inventario/sw.js')
+      .catch(err => console.log('SW error:', err));
+  });
 }
 </script>
 <style>
