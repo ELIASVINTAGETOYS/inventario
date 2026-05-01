@@ -1015,8 +1015,7 @@ window.takePhoto = () => {
   canvas.height = video.videoHeight;
   canvas.getContext('2d').drawImage(video, 0, 0);
   closeCamera();
-  setPhoto(canvas.toDataURL('image/jpeg', 0.85));
-  showToast('✅ Foto tomada');
+  openCrop(canvas.toDataURL('image/jpeg', 0.85));
 };
 
 window.closeCamera = () => {
