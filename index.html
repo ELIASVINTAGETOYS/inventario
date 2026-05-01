@@ -1107,7 +1107,7 @@ window.resetPhoto = () => {
 };
 
 // ─── VIDEO GRABADOR ───────────────────────────────────────────────────
-const MAX_REC_SECONDS = 10;
+const MAX_REC_SECONDS = 5;
 
 window.resetVideo = () => {
   currentVideo = null;
@@ -1120,8 +1120,8 @@ window.resetVideo = () => {
 window.openVideoRecorder = async () => {
   try {
     recStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 480 }, height: { ideal: 360 } },
-      audio: true
+      video: { facingMode: 'environment', width: { ideal: 240 }, height: { ideal: 180 } },
+      audio: false  // sin audio para ahorrar espacio
     });
     document.getElementById('rec-video').srcObject = recStream;
     document.getElementById('video-recorder-modal').classList.add('open');
@@ -1148,20 +1148,18 @@ window.toggleRecording = () => {
     recMediaRecorder.stop();
     return;
   }
-  // Elegir el mejor codec disponible y baja bitrate
   const mimeTypes = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
   const mime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || '';
   recChunks = [];
   recMediaRecorder = new MediaRecorder(recStream, {
     mimeType: mime || undefined,
-    videoBitsPerSecond: 150000, // 150 kbps — baja calidad pero pesa poco
-    audioBitsPerSecond: 32000
+    videoBitsPerSecond: 80000,  // 80 kbps — muy bajo
+    audioBitsPerSecond: 0
   });
   recMediaRecorder.ondataavailable = e => { if (e.data.size > 0) recChunks.push(e.data); };
   recMediaRecorder.onstop = () => processVideo();
   recMediaRecorder.start(100);
 
-  // UI
   document.getElementById('rec-shoot-btn').className = 'rec-shoot recording';
   document.getElementById('rec-shoot-btn').textContent = '⏹';
   const timer = document.getElementById('rec-timer');
@@ -1183,86 +1181,68 @@ window.toggleRecording = () => {
 async function processVideo() {
   clearInterval(recInterval);
   if (recStream) recStream.getTracks().forEach(t => t.stop());
-  
-  // Mostrar pantalla de compresión
   const compEl = document.getElementById('rec-compressing');
   const fillEl = document.getElementById('rec-compress-fill');
   compEl.classList.add('show');
-  fillEl.style.width = '20%';
+  fillEl.style.width = '30%';
 
   const blob = new Blob(recChunks, { type: recChunks[0]?.type || 'video/webm' });
-  fillEl.style.width = '60%';
+  fillEl.style.width = '70%';
 
-  // Si pesa menos de 900KB, usarlo directo
-  if (blob.size < 900 * 1024) {
-    const url = URL.createObjectURL(blob);
-    fillEl.style.width = '100%';
-    setTimeout(() => finishVideo(blob, url), 400);
-    return;
-  }
-
-  // Comprimir re-encodando frames con Canvas
+  // Re-encodar a canvas 240x180 para comprimir más
   try {
     const url = URL.createObjectURL(blob);
     const tempVid = document.createElement('video');
     tempVid.src = url; tempVid.muted = true;
     await new Promise(r => { tempVid.onloadedmetadata = r; tempVid.load(); });
-    
-    const duration = tempVid.duration;
     const canvas = document.createElement('canvas');
-    canvas.width = 320; canvas.height = 240;
+    canvas.width = 240; canvas.height = 180;
     const ctx = canvas.getContext('2d');
-    
-    const stream = canvas.captureStream(12); // 12 fps
     const mime2 = MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/webm';
-    const mr = new MediaRecorder(stream, { mimeType: mime2, videoBitsPerSecond: 120000 });
+    const stream2 = canvas.captureStream(8); // 8 fps
+    const mr = new MediaRecorder(stream2, { mimeType: mime2, videoBitsPerSecond: 60000 });
     const chunks2 = [];
-    mr.ondataavailable = e => chunks2.push(e.data);
-
-    mr.start();
+    mr.ondataavailable = e => { if(e.data.size>0) chunks2.push(e.data); };
+    mr.start(100);
     tempVid.play();
-    fillEl.style.width = '70%';
-
     await new Promise(resolve => {
-      const drawFrame = () => {
-        ctx.drawImage(tempVid, 0, 0, 320, 240);
-        if (!tempVid.ended && !tempVid.paused) requestAnimationFrame(drawFrame);
-        else { mr.stop(); resolve(); }
-      };
-      tempVid.onplay = () => requestAnimationFrame(drawFrame);
       tempVid.onended = () => { mr.stop(); resolve(); };
-      setTimeout(() => { mr.stop(); resolve(); }, (duration + 1) * 1000);
+      tempVid.ontimeupdate = () => ctx.drawImage(tempVid, 0, 0, 240, 180);
+      setTimeout(() => { mr.stop(); resolve(); }, (tempVid.duration + 2) * 1000);
     });
-
+    await new Promise(r => { mr.onstop = r; setTimeout(r, 1000); });
     fillEl.style.width = '90%';
-    await new Promise(r => mr.onstop = r);
     const blob2 = new Blob(chunks2, { type: mime2 });
+    const kb = Math.round(blob2.size / 1024);
     const url2 = URL.createObjectURL(blob2);
     fillEl.style.width = '100%';
-    setTimeout(() => finishVideo(blob2, url2), 300);
+    setTimeout(() => finishVideo(blob2, url2, kb), 300);
   } catch(e) {
-    // Si falla la compresión, usar el original
     const url = URL.createObjectURL(blob);
+    const kb = Math.round(blob.size / 1024);
     fillEl.style.width = '100%';
-    setTimeout(() => finishVideo(blob, url), 300);
+    setTimeout(() => finishVideo(blob, url, kb), 300);
   }
 }
 
-function finishVideo(blob, url) {
+function finishVideo(blob, url, kb) {
   document.getElementById('video-recorder-modal').classList.remove('open');
   document.getElementById('rec-compressing').classList.remove('show');
-
-  // Convertir a base64 para guardar
   const reader = new FileReader();
   reader.onload = e => {
-    currentVideo = e.target.result;
+    const data = e.target.result;
+    const sizeMB = (data.length * 0.75 / 1024 / 1024).toFixed(2);
+    if (parseFloat(sizeMB) > 0.95) {
+      showToast(`⚠️ Video muy pesado (${sizeMB}MB). Graba menos segundos.`);
+      return;
+    }
+    currentVideo = data;
     const vid = document.getElementById('vid-preview');
     vid.src = url;
     vid.style.display = 'block';
     document.getElementById('video-placeholder').style.display = 'none';
     document.getElementById('vid-change').style.display = 'block';
-    const kb = Math.round(blob.size / 1024);
-    showToast(`✅ Video listo (${kb} KB)`);
+    showToast(`✅ Video listo (${kb}KB)`);
   };
   reader.readAsDataURL(blob);
 }
