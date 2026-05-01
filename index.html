@@ -1184,57 +1184,27 @@ async function processVideo() {
   const compEl = document.getElementById('rec-compressing');
   const fillEl = document.getElementById('rec-compress-fill');
   compEl.classList.add('show');
-  fillEl.style.width = '30%';
+  fillEl.style.width = '50%';
 
   const blob = new Blob(recChunks, { type: recChunks[0]?.type || 'video/webm' });
-  fillEl.style.width = '70%';
-
-  // Re-encodar a canvas 240x180 para comprimir más
-  try {
-    const url = URL.createObjectURL(blob);
-    const tempVid = document.createElement('video');
-    tempVid.src = url; tempVid.muted = true;
-    await new Promise(r => { tempVid.onloadedmetadata = r; tempVid.load(); });
-    const canvas = document.createElement('canvas');
-    canvas.width = 240; canvas.height = 180;
-    const ctx = canvas.getContext('2d');
-    const mime2 = MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/webm';
-    const stream2 = canvas.captureStream(8); // 8 fps
-    const mr = new MediaRecorder(stream2, { mimeType: mime2, videoBitsPerSecond: 60000 });
-    const chunks2 = [];
-    mr.ondataavailable = e => { if(e.data.size>0) chunks2.push(e.data); };
-    mr.start(100);
-    tempVid.play();
-    await new Promise(resolve => {
-      tempVid.onended = () => { mr.stop(); resolve(); };
-      tempVid.ontimeupdate = () => ctx.drawImage(tempVid, 0, 0, 240, 180);
-      setTimeout(() => { mr.stop(); resolve(); }, (tempVid.duration + 2) * 1000);
-    });
-    await new Promise(r => { mr.onstop = r; setTimeout(r, 1000); });
-    fillEl.style.width = '90%';
-    const blob2 = new Blob(chunks2, { type: mime2 });
-    const kb = Math.round(blob2.size / 1024);
-    const url2 = URL.createObjectURL(blob2);
-    fillEl.style.width = '100%';
-    setTimeout(() => finishVideo(blob2, url2, kb), 300);
-  } catch(e) {
-    const url = URL.createObjectURL(blob);
-    const kb = Math.round(blob.size / 1024);
-    fillEl.style.width = '100%';
-    setTimeout(() => finishVideo(blob, url, kb), 300);
-  }
+  const kb = Math.round(blob.size / 1024);
+  fillEl.style.width = '100%';
+  
+  setTimeout(() => finishVideo(blob, kb), 400);
 }
 
-function finishVideo(blob, url, kb) {
+function finishVideo(blob, kb) {
   document.getElementById('video-recorder-modal').classList.remove('open');
   document.getElementById('rec-compressing').classList.remove('show');
+  
+  const url = URL.createObjectURL(blob);
   const reader = new FileReader();
   reader.onload = e => {
     const data = e.target.result;
-    const sizeMB = (data.length * 0.75 / 1024 / 1024).toFixed(2);
+    const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
     if (parseFloat(sizeMB) > 0.95) {
-      showToast(`⚠️ Video muy pesado (${sizeMB}MB). Graba menos segundos.`);
-      return;
+      showToast(`⚠️ Video muy pesado (${sizeMB}MB). Graba menos tiempo.`);
+      // Aún así mostrar el video aunque no se pueda guardar
     }
     currentVideo = data;
     const vid = document.getElementById('vid-preview');
