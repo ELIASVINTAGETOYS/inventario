@@ -9,7 +9,7 @@
 <title>🤖 Battery Vintage Toys — Inventario</title>
 <!-- VERSIÓN: actualiza este número cada vez que subas cambios -->
 <script>
-const APP_VERSION = '20260501-002';
+const APP_VERSION = '20260501-003';
 const STORED_VERSION = localStorage.getItem('app_version');
 if (STORED_VERSION !== APP_VERSION) {
   localStorage.setItem('app_version', APP_VERSION);
@@ -194,7 +194,7 @@ body::before {
 .search-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 12px rgba(255,215,0,0.15); }
 
 /* GRID */
-.toys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.toys-grid { display: flex; flex-direction: column; gap: 8px; }
 .toy-card {
   background: var(--card); border-radius: 16px; overflow: hidden;
   border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;
@@ -1127,17 +1127,15 @@ window.renderGrid = () => {
   loading.style.display = 'none';
   empty.style.display = list.length ? 'none' : 'block';
   grid.innerHTML = list.map(t => `
-    <div class="toy-card" onclick="openDetail('${t.id}')">
-      <div class="toy-img-wrap">
-        ${t.fotoUrl ? `<img src="${t.fotoUrl}" loading="lazy">` : '<span style="font-size:3rem">🤖</span>'}
-        ${t.compra ? `<div class="toy-price-overlay">$${Number(t.compra).toLocaleString()}</div>` : ''}
-        ${t.hasVideo ? `<div style="position:absolute;top:7px;right:7px;z-index:2;background:rgba(0,0,0,0.7);border-radius:8px;padding:2px 6px;font-size:0.65rem;color:var(--teal);font-weight:800">🎬</div>` : ''}
+    <div class="top10-item" onclick="openDetail('${t.id}')">
+      <div class="top10-img">${t.fotoUrl ? `<img src="${t.fotoUrl}" loading="lazy">` : '🤖'}</div>
+      <div class="top10-info">
+        <div class="top10-nm">${t.nombre}</div>
+        <div class="top10-br">${t.marca||''}${t.anio?' · '+t.anio:''}</div>
+        ${t.cat ? `<div style="font-size:0.65rem;color:var(--muted);margin-top:2px">📦 ${t.cat}</div>` : ''}
       </div>
-      <div class="toy-info">
-        <div class="toy-name">${t.nombre}</div>
-        <div class="toy-brand">${t.marca||''}${t.anio?' · '+t.anio:''}</div>
-        ${t.cat ? `<div class="toy-user">📦 ${t.cat}</div>` : ''}
-      </div>
+      ${t.hasVideo ? `<div style="font-size:0.7rem;color:var(--teal);margin-right:4px">🎬</div>` : ''}
+      <div class="top10-price">${t.compra ? '$'+Number(t.compra).toLocaleString() : '—'}</div>
     </div>`).join('');
 };
 
