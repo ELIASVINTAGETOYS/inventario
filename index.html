@@ -1987,12 +1987,26 @@ Analiza esta imagen con todo detalle y proporciona:
     const formatted = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g,'<br>');
     result.innerHTML = formatted;
 
+    // Comprimir foto para Firestore
+    let fotoGuardar = '';
+    try {
+      const canvas = document.createElement('canvas');
+      const img = new Image();
+      await new Promise(r => { img.onload = r; img.src = valPhoto; });
+      const maxW = 400;
+      const scale = Math.min(1, maxW / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      fotoGuardar = canvas.toDataURL('image/jpeg', 0.4);
+    } catch(e) { fotoGuardar = ''; }
+
     // Guardar en Firebase
     const valuacion = {
       userId: currentUser.uid,
       fecha: new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'}),
       fechaISO: new Date().toISOString(),
-      fotoUrl: valPhoto,
+      fotoUrl: fotoGuardar,
       analisis: text
     };
     await addDoc(collection(db, 'valuaciones'), valuacion);
