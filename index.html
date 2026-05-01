@@ -1836,11 +1836,17 @@ window.shareOneToy = () => {
   if (t.cat)    msg += `🏷️ *Categoría:* ${t.cat}\n`;
   msg += `\n💰 *Precio:* ${precio}\n`;
   if (t.notas)  msg += `\n📖 *Notas:* ${t.notas}\n`;
-  if (t.fotoUrl) {
-    msg += `\n📸 *Ver foto del juguete:*\n${t.fotoUrl}`;
-  }
-  msg += `\n\n_Battery Vintage Toys — Colección de juguetes vintage_`;
+  msg += `\n_Battery Vintage Toys — Colección de juguetes vintage_`;
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+};
+
+window.searchEbay = () => {
+  const t = toys.find(x => x.id === currentId);
+  if (!t) return;
+  // Construir búsqueda con nombre y marca para mayor precisión
+  const query = [t.nombre, t.marca, t.anio].filter(Boolean).join(' ');
+  const ebayUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&_sop=12`;
+  window.open(ebayUrl, '_blank');
 };
 
 window.shareWhatsApp = () => {
