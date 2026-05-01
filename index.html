@@ -688,7 +688,7 @@ body {
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, onSnapshot, updateDoc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 // Storage no necesario - fotos en Firestore
 
 const firebaseConfig = {
@@ -1437,19 +1437,19 @@ window.saveToy = async () => {
   const savedEditingId = editingId;
 
   try {
-    // Comprimir foto para Firestore (max ~500KB)
+    // Comprimir foto para Firestore (max ~400KB)
     let fotoUrl = '';
     if (currentPhoto) {
       try {
         const canvas = document.createElement('canvas');
         const img = new Image();
         await new Promise(r => { img.onload = r; img.src = currentPhoto; });
-        const maxW = 600;
+        const maxW = 500;
         const scale = Math.min(1, maxW / img.width);
         canvas.width = img.width * scale;
         canvas.height = img.height * scale;
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        fotoUrl = canvas.toDataURL('image/jpeg', 0.6);
+        fotoUrl = canvas.toDataURL('image/jpeg', 0.5);
       } catch(e) { fotoUrl = currentPhoto; }
     }
 
@@ -1467,19 +1467,34 @@ window.saveToy = async () => {
         : document.getElementById('f-cat').value,
       notas: document.getElementById('f-notas').value.trim(),
       aiDesc: currentAiDesc || '',
-      videoUrl: currentVideo || '',
+      hasVideo: !!currentVideo,
       fotoUrl,
       userId: currentUser.uid,
       userName: currentUser.displayName || 'Usuario',
       userEmail: currentUser.email,
     };
+
+    let toyId = savedEditingId;
     if (savedEditingId) {
       await updateDoc(doc(db, 'toys', savedEditingId), toyData);
       editingId = null;
     } else {
       toyData.fecha = new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'});
       toyData.fechaISO = new Date().toISOString();
-      await addDoc(collection(db, 'toys'), toyData);
+      const ref = await addDoc(collection(db, 'toys'), toyData);
+      toyId = ref.id;
+    }
+
+    // Guardar video en documento separado
+    if (currentVideo && toyId) {
+      try {
+        await setDoc(doc(db, 'toyvideos', toyId), { videoData: currentVideo, toyId });
+      } catch(ve) {
+        showToast('⚠️ Juguete guardado pero video muy pesado');
+      }
+    } else if (!currentVideo && toyId) {
+      // Si se quitó el video, borrar el documento de video
+      try { await deleteDoc(doc(db, 'toyvideos', toyId)); } catch(e) {}
     }
 
     clearForm();
@@ -1552,9 +1567,25 @@ window.openDetail = (id) => {
     const formatted = t.aiDesc.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g,'<br>');
     sections += `<div class="info-card"><h4>🤖 IA</h4><p style="font-size:0.88rem;line-height:1.8;color:#ffffff">${formatted}</p></div>`;
   }
-  if (t.videoUrl) sections += `<div class="info-card"><h4>🎬 Video</h4><video src="${t.videoUrl}" controls playsinline style="width:100%;border-radius:10px;max-height:260px;background:#000;margin-top:4px"></video></div>`;
+  if (t.hasVideo) sections += `<div class="info-card" id="video-section"><h4>🎬 Video</h4><div id="video-loading" style="color:var(--muted);font-size:0.85rem;padding:8px">⏳ Cargando video...</div></div>`;
   document.getElementById('d-sections').innerHTML = sections;
   document.getElementById('detail-overlay').classList.add('open');
+
+  // Cargar video desde colección separada
+  if (t.hasVideo) {
+    getDoc(doc(db, 'toyvideos', t.id)).then(snap => {
+      if (snap.exists()) {
+        const videoData = snap.data().videoData;
+        const videoSection = document.getElementById('video-section');
+        if (videoSection) {
+          videoSection.innerHTML = `<h4>🎬 Video</h4><video src="${videoData}" controls playsinline style="width:100%;border-radius:10px;max-height:260px;background:#000;margin-top:4px"></video>`;
+        }
+      }
+    }).catch(() => {
+      const vs = document.getElementById('video-section');
+      if (vs) vs.innerHTML = '<h4>🎬 Video</h4><p style="color:var(--muted);font-size:0.85rem">No se pudo cargar el video</p>';
+    });
+  }
 };
 
 window.closeDetail = () => { document.getElementById('detail-overlay').classList.remove('open'); currentId = null; };
@@ -1566,7 +1597,7 @@ window.deleteToy = async () => {
   if (!confirm('¿Eliminar este juguete?')) return;
   try {
     await deleteDoc(doc(db, 'toys', currentId));
-// foto guardada en Firestore, se elimina con el documento
+    try { await deleteDoc(doc(db, 'toyvideos', currentId)); } catch(e) {}
     closeDetail();
     showToast('🗑️ Eliminado');
   } catch(e) { showToast('Error al eliminar', true); }
