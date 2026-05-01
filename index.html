@@ -1825,7 +1825,21 @@ window.deleteToy = async () => {
 window.shareOneToy = () => {
   const t = toys.find(x => x.id === currentId);
   if (!t) return;
-  const msg = `🤖 *Battery Vintage Toys*\n\n*${t.nombre}*\n🏭 ${t.marca||'N/A'}\n📅 ${t.anio||'N/A'}\n💰 $${t.valor||0} USD\n\n_Inventario Battery Vintage Toys_`;
+  const precio = t.compra ? `$${Number(t.compra).toLocaleString()} USD` : 'No especificado';
+  const caja = t.caja === 'si' ? 'Con caja original' : t.caja === 'inc' ? 'Caja incompleta' : 'Sin caja';
+  let msg = `🤖 *${t.nombre}*\n\n`;
+  if (t.marca)  msg += `🏭 *Marca:* ${t.marca}\n`;
+  if (t.anio)   msg += `📅 *Año:* ${t.anio}\n`;
+  if (t.origen) msg += `🌍 *Origen:* ${t.origen}\n`;
+  if (t.estado) msg += `⭐ *Estado:* ${t.estado}\n`;
+  if (t.caja)   msg += `📦 *Caja:* ${caja}\n`;
+  if (t.cat)    msg += `🏷️ *Categoría:* ${t.cat}\n`;
+  msg += `\n💰 *Precio:* ${precio}\n`;
+  if (t.notas)  msg += `\n📖 *Notas:* ${t.notas}\n`;
+  if (t.fotoUrl) {
+    msg += `\n📸 *Ver foto del juguete:*\n${t.fotoUrl}`;
+  }
+  msg += `\n\n_Battery Vintage Toys — Colección de juguetes vintage_`;
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
