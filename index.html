@@ -761,31 +761,54 @@ body::before {
 
 <!-- VALUAR -->
 <div class="view" id="view-valuar">
-  <div class="section-title">💎 Valuador de juguetes</div>
-  <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Sube una foto y la IA analizará el juguete con historia, precio estimado y rareza.</p>
 
-  <!-- Foto para valuar -->
-  <div class="photo-area" id="val-photo-area" style="height:100px;margin-bottom:12px">
-    <div id="val-placeholder" class="photo-btns">
-      <button class="photo-btn" onclick="openValCamera()">📷 Cámara</button>
-      <button class="photo-btn secondary" onclick="document.getElementById('val-gallery').click()">🖼️ Galería</button>
-    </div>
-    <img id="val-preview" class="photo-preview-img" style="display:none">
-    <button id="val-change" class="change-btn" style="display:none" onclick="resetValPhoto()">✏️ Cambiar</button>
+  <!-- BOTONES PRINCIPALES -->
+  <div style="display:flex;gap:10px;margin-bottom:16px">
+    <button onclick="showValPanel('nuevo')" id="vbtn-nuevo"
+      style="flex:1;padding:13px;border-radius:14px;border:2px solid var(--teal);background:rgba(0,229,196,0.15);color:var(--teal);font-family:'Fredoka One',cursive;font-size:1rem;cursor:pointer">
+      💎 Valuar
+    </button>
+    <button onclick="showValPanel('historial')" id="vbtn-historial"
+      style="flex:1;padding:13px;border-radius:14px;border:2px solid var(--border);background:var(--card);color:var(--muted);font-family:'Fredoka One',cursive;font-size:1rem;cursor:pointer">
+      📋 Historial
+    </button>
   </div>
-  <input type="file" accept="image/*" id="val-gallery" style="display:none" onchange="onValPhoto(this)">
 
-  <button class="btn btn-primary" id="val-btn" onclick="valuarJuguete()" disabled style="margin-bottom:16px">
-    💎 Analizar y valuar
-  </button>
+  <!-- PANEL: NUEVO VALUAR -->
+  <div id="val-panel-nuevo">
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Sube una foto y la IA analizará el juguete con historia, precio estimado y rareza.</p>
+    <div class="photo-area" id="val-photo-area" style="height:100px;margin-bottom:12px">
+      <div id="val-placeholder" class="photo-btns">
+        <button class="photo-btn" onclick="openValCamera()">📷 Cámara</button>
+        <button class="photo-btn secondary" onclick="document.getElementById('val-gallery').click()">🖼️ Galería</button>
+      </div>
+      <img id="val-preview" class="photo-preview-img" style="display:none">
+      <button id="val-change" class="change-btn" style="display:none" onclick="resetValPhoto()">✏️ Cambiar</button>
+    </div>
+    <input type="file" accept="image/*" id="val-gallery" style="display:none" onchange="onValPhoto(this)">
+    <button class="btn btn-primary" id="val-btn" onclick="valuarJuguete()" disabled style="margin-bottom:16px">
+      💎 Analizar y valuar
+    </button>
+    <div id="val-result" class="ai-result" style="display:none"></div>
+  </div>
 
-  <div id="val-result" class="ai-result" style="display:none"></div>
-
-  <!-- Historial de valuaciones -->
-  <div style="margin-top:20px">
-    <div class="section-title" style="font-size:0.95rem">📋 Historial de valuaciones</div>
+  <!-- PANEL: HISTORIAL -->
+  <div id="val-panel-historial" style="display:none">
     <div id="val-historial"></div>
   </div>
+
+  <!-- PANEL: DETALLE DE VALUACIÓN -->
+  <div id="val-panel-detalle" style="display:none">
+    <button onclick="backToHistorial()"
+      style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:10px 16px;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.9rem;cursor:pointer;margin-bottom:14px">
+      ← Volver al historial
+    </button>
+    <div id="val-detalle-foto" style="width:100%;height:180px;background:#050508;border-radius:14px;overflow:hidden;margin-bottom:12px;display:flex;align-items:center;justify-content:center">
+      <span style="font-size:3rem">💎</span>
+    </div>
+    <div id="val-detalle-texto" class="ai-result" style="display:block"></div>
+  </div>
+
 </div>
 
 <!-- AGREGAR -->
@@ -1884,6 +1907,30 @@ window.shareWhatsApp = () => {
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
+// ─── NAVEGACIÓN VALUADOR ──────────────────────────────────────────────
+window.showValPanel = (panel) => {
+  document.getElementById('val-panel-nuevo').style.display = panel === 'nuevo' ? 'block' : 'none';
+  document.getElementById('val-panel-historial').style.display = panel === 'historial' ? 'block' : 'none';
+  document.getElementById('val-panel-detalle').style.display = panel === 'detalle' ? 'block' : 'none';
+  // Estilos botones
+  const btnNuevo = document.getElementById('vbtn-nuevo');
+  const btnHist = document.getElementById('vbtn-historial');
+  if (btnNuevo && btnHist) {
+    if (panel === 'nuevo') {
+      btnNuevo.style.borderColor = 'var(--teal)'; btnNuevo.style.color = 'var(--teal)'; btnNuevo.style.background = 'rgba(0,229,196,0.15)';
+      btnHist.style.borderColor = 'var(--border)'; btnHist.style.color = 'var(--muted)'; btnHist.style.background = 'var(--card)';
+    } else {
+      btnHist.style.borderColor = 'var(--teal)'; btnHist.style.color = 'var(--teal)'; btnHist.style.background = 'rgba(0,229,196,0.15)';
+      btnNuevo.style.borderColor = 'var(--border)'; btnNuevo.style.color = 'var(--muted)'; btnNuevo.style.background = 'var(--card)';
+    }
+  }
+  if (panel === 'historial') loadValHistorial();
+};
+
+window.backToHistorial = () => {
+  showValPanel('historial');
+};
+
 // ─── VALUADOR ─────────────────────────────────────────────────────────
 let valPhoto = null;
 
@@ -2012,6 +2059,7 @@ Analiza esta imagen con todo detalle y proporciona:
     await addDoc(collection(db, 'valuaciones'), valuacion);
     showToast('✅ Valuación guardada');
     loadValHistorial();
+    setTimeout(() => showValPanel('historial'), 1500);
 
   } catch(e) {
     result.innerHTML = '❌ Error: ' + e.message;
@@ -2022,45 +2070,49 @@ Analiza esta imagen con todo detalle y proporciona:
 
 async function loadValHistorial() {
   const el = document.getElementById('val-historial');
+  el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">⏳ Cargando...</div>';
   try {
     const q = query(collection(db, 'valuaciones'), orderBy('fechaISO','desc'));
     const snap = await getDocs(q);
-    const vals = snap.docs.filter(d => d.data().userId === currentUser.uid).slice(0, 20);
+    const vals = snap.docs.filter(d => d.data().userId === currentUser.uid).slice(0, 30);
     if (!vals.length) {
       el.innerHTML = '<div class="empty" style="padding:20px"><div class="emoji">💎</div><p>Aún no tienes valuaciones guardadas</p></div>';
       return;
     }
     el.innerHTML = vals.map(d => {
       const v = d.data();
-      const preview = v.analisis.substring(0, 120).replace(/\*\*/g,'') + '...';
-      return `<div class="hist-item" onclick="openValDetail('${d.id}')" style="align-items:flex-start">
+      const preview = (v.analisisPreview || v.analisis || '').substring(0, 100).replace(/\*\*/g,'') + '...';
+      return `<div class="hist-item" onclick="openValDetail('${d.id}')">
         <div class="hist-img">${v.fotoUrl ? `<img src="${v.fotoUrl}" loading="lazy">` : '💎'}</div>
         <div class="hist-info" style="flex:1">
-          <div class="hist-name" style="font-size:0.8rem">${preview}</div>
+          <div class="hist-name" style="font-size:0.78rem;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${preview}</div>
           <div class="hist-date">📅 ${v.fecha}</div>
         </div>
+        <div style="color:var(--muted);font-size:1.2rem">›</div>
       </div>`;
     }).join('');
   } catch(e) {
-    el.innerHTML = '<p style="color:var(--muted);font-size:0.82rem">Error cargando historial</p>';
+    el.innerHTML = '<p style="color:var(--muted);font-size:0.82rem;text-align:center">Error cargando historial</p>';
   }
 }
 
 window.openValDetail = async (id) => {
+  showValPanel('detalle');
+  document.getElementById('val-detalle-texto').innerHTML = '<span style="color:var(--muted)">⏳ Cargando...</span>';
   try {
     const snap = await getDoc(doc(db, 'valuaciones', id));
+    const snapTexto = await getDoc(doc(db, 'valuaciones_texto', id));
     if (!snap.exists()) return;
     const v = snap.data();
-    const formatted = v.analisis.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g,'<br>');
-    document.getElementById('val-result').innerHTML = formatted;
-    document.getElementById('val-result').style.display = 'block';
+    const analisis = snapTexto.exists() ? snapTexto.data().analisis : (v.analisis || v.analisisPreview || '');
+    const formatted = analisis.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g,'<br>');
+    document.getElementById('val-detalle-texto').innerHTML = formatted;
+    const fotoDiv = document.getElementById('val-detalle-foto');
     if (v.fotoUrl) {
-      document.getElementById('val-preview').src = v.fotoUrl;
-      document.getElementById('val-preview').style.display = 'block';
-      document.getElementById('val-placeholder').style.display = 'none';
+      fotoDiv.innerHTML = `<img src="${v.fotoUrl}" style="width:100%;height:100%;object-fit:cover">`;
     }
     document.getElementById('app-content').scrollTop = 0;
-  } catch(e) {}
+  } catch(e) { showToast('Error cargando valuación', true); }
 };
 
 // ─── NAV ──────────────────────────────────────────────────────────────
