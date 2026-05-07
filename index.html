@@ -681,7 +681,7 @@ body::before {
     <div class="hstat">🧸 <b id="h-count">0</b> pzas</div>
     <div class="hstat">💰 <b id="h-usd">$0</b> Invertido</div>
     <div class="hstat">👤 <b id="h-user">—</b></div>
-    <div class="hstat" style="color:rgba(255,215,0,0.45);font-size:0.58rem;letter-spacing:0.3px">📅 v01-May-2026 15:10</div>
+    <div class="hstat" style="color:rgba(255,215,0,0.45);font-size:0.58rem;letter-spacing:0.3px">📅 v07-May-2026 12:30</div>
   </div>
 </div>
 
@@ -1049,7 +1049,7 @@ body::before {
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, onSnapshot, updateDoc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where, orderBy, onSnapshot, updateDoc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 // Storage no necesario - fotos en Firestore
 
 const firebaseConfig = {
@@ -1116,7 +1116,7 @@ onAuthStateChanged(auth, user => {
 
 // ─── FIRESTORE LISTENER ───────────────────────────────────────────────
 function startListening() {
-  const q = query(collection(db, 'toys'), orderBy('fechaISO', 'desc'));
+  const q = query(collection(db, 'toys'), where('userId', '==', currentUser.uid), orderBy('fechaISO', 'desc'));
   unsubscribe = onSnapshot(q, snapshot => {
     toys = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     renderGrid();
