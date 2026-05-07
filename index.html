@@ -681,7 +681,7 @@ body::before {
     <div class="hstat">🧸 <b id="h-count">0</b> pzas</div>
     <div class="hstat">💰 <b id="h-usd">$0</b> Invertido</div>
     <div class="hstat">👤 <b id="h-user">—</b></div>
-    <div class="hstat" style="color:rgba(255,215,0,0.45);font-size:0.58rem;letter-spacing:0.3px">📅 v07-May-2026 12:30</div>
+    <div class="hstat" style="color:rgba(255,215,0,0.45);font-size:0.58rem;letter-spacing:0.3px">📅 v07-May-2026 14:15</div>
   </div>
 </div>
 
@@ -1116,15 +1116,22 @@ onAuthStateChanged(auth, user => {
 
 // ─── FIRESTORE LISTENER ───────────────────────────────────────────────
 function startListening() {
-  const q = query(collection(db, 'toys'), where('userId', '==', currentUser.uid), orderBy('fechaISO', 'desc'));
+  // NOTA: No usar orderBy aquí junto con where() — requiere índice compuesto en Firestore.
+  // En su lugar ordenamos en JS después de recibir los datos.
+  const q = query(collection(db, 'toys'), where('userId', '==', currentUser.uid));
   unsubscribe = onSnapshot(q, snapshot => {
     toys = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Ordenar por fechaISO descendente en JavaScript
+    toys.sort((a, b) => (b.fechaISO || '').localeCompare(a.fechaISO || ''));
     renderGrid();
     renderCatFilters();
     renderTop10();
     renderStats();
     renderHistorial();
     updateHeader();
+  }, err => {
+    console.error('Error Firestore:', err);
+    document.getElementById('loading-state').innerHTML = '<div class="emoji">⚠️</div><h3>Error al cargar</h3><p style="font-size:0.8rem;color:var(--muted)">' + err.message + '</p>';
   });
 }
 
