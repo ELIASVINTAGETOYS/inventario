@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.eliasvintagetoys.twa",
+        "sha256_cert_fingerprints": ["7A:E6:CE:E0:CF:45:3E:11:D8:29:62:83:B8:C6:AF:5A:C9:C5:B4:8F:44:7C:C1:33:A2:E3:D1:A3:36:B6:AA:F9"]
+      }
+    }]
